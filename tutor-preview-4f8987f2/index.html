@@ -103,7 +103,7 @@ textarea { width: 100%; min-height: 84px; padding: 10px 12px; border: 1px solid 
 <div class="banner">Prototype. It uses one lesson that's already prepared, and nothing is uploaded.</div>
 <main class="wrap">
   <h1>Turn a lesson into practice</h1>
-  <p class="sub">A tutor's view: drop in what you taught, make it fit the student, and send it.</p>
+  <p class="sub">You're the tutor here, and Ben is your student. Add what you taught, tailor it to him, and send it.</p>
   <ol class="steps" id="steps"></ol>
   <div id="view"></div>
 </main>
@@ -168,9 +168,9 @@ function focusChips() {
 function renderAdd() {
   $("view").innerHTML = `<section class="panel">
     ${whoHTML("Beginner Mandarin · 8 lessons so far")}
-    <span class="lab">What should Ben focus on?</span>
+    <span class="lab">What does Ben need extra practice on?</span>
     ${focusChips()}
-    <p class="hint">Sample notes. A tutor would keep these up to date for each student.</p>
+    <p class="hint">Tap the topics you want him to practise first. These are sample topics.</p>
     <button type="button" class="drop" id="drop"><b>Add today's lesson</b><span>PDF, slides or notes</span></button>
     <p class="hint">In this prototype, this loads “${esc(LESSON_FILE)}”.</p>
   </section>`;
