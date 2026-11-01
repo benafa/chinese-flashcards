@@ -117,6 +117,7 @@ document.querySelector(".wrap").addEventListener("click", e => {
   if (el.dataset.unit !== undefined) return openUnit(el.dataset.unit === "" ? null : Number(el.dataset.unit));
   if (el.dataset.practise) {
     state.units = new Set([Number(el.dataset.practise)]);
+    if (!unitHasCards(Number(el.dataset.practise))) state.deck = "words";
     renderControls(); start(); setTab("cards");
     return;
   }

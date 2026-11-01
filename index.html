@@ -387,6 +387,14 @@ function paintPlay() {
   b.setAttribute("aria-label", state.muted ? "Sound is muted. Unmute" : "Play pronunciation");
 }
 
+function unitHasCards(n) { return (state.deck === "words" ? WORDS : SENTENCES).some(c => c[3] === n); }
+
+function fitUnits() {
+  if (state.units.size === 9) return;
+  const kept = [...state.units].filter(unitHasCards);
+  state.units = new Set(kept.length ? kept : Object.keys(UNITS).map(Number));
+}
+
 function unitSummary() {
   if (state.units.size === 9) return "All units";
   if (state.units.size === 1) return "Unit " + [...state.units][0];
@@ -409,18 +417,20 @@ function renderControls() {
   const m = $("modes"); m.replaceChildren();
   MODES.forEach(([k,l]) => m.append(chip(l, state.mode===k, () => { state.mode=k; renderControls(); state.revealed=false; renderCard(); })));
   const d = $("decks"); d.replaceChildren();
-  DECKS.forEach(([k,l]) => d.append(chip(l, state.deck===k, () => { state.deck=k; renderControls(); start(); })));
+  DECKS.forEach(([k,l]) => d.append(chip(l, state.deck===k, () => { state.deck=k; fitUnits(); renderControls(); start(); })));
   const u = $("units"); u.replaceChildren();
   const all = state.units.size === 9;
   u.append(chip("All", all, () => { if (all) return; state.units = new Set(Object.keys(UNITS).map(Number)); renderControls(); start(); }));
   Object.entries(UNITS).forEach(([n,l]) => {
     const num = Number(n);
-    u.append(chip(n + " · " + l, !all && state.units.has(num), () => {
+    const c = chip(n + " · " + l, !all && state.units.has(num), () => {
       if (all) state.units = new Set([num]);
       else if (state.units.has(num) && state.units.size > 1) state.units.delete(num);
       else state.units.add(num);
       renderControls(); start();
-    }));
+    });
+    c.disabled = !unitHasCards(num);
+    u.append(c);
   });
   const s = $("sound"); s.replaceChildren();
   s.append(toggle("Mute", state.muted, () => setMuted(!state.muted), "danger"));
