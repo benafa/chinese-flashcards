@@ -49,6 +49,24 @@ function block(b){
 function sectionHTML(s){ return `<section class="sec">${s.title ? `<h3>${inline(s.title)}</h3>` : ""}${s.blocks.map(block).join("")}</section>`; }
 
 /* Study */
+// Plain headings for a single lesson page: words grouped together, no pattern labels, no links to other units
+function lessonSections(u){
+  const out = [];
+  u.sections.forEach(s => {
+    const title = s.title === "Patterns" ? "Sentences" : s.title.startsWith("Words") ? "Words" : s.title;
+    let sec = out.find(x => x.title === title);
+    if (!sec) out.push(sec = { title, blocks: [] });
+    s.blocks.forEach(b => {
+      if (b.t === "p") return sec.blocks.push({ ...b, h: b.h.replace(/ \(Unit \d+\)/g, "") });
+      if (b.t !== "lines") return sec.blocks.push(b);
+      const rows = b.rows.map(r => ({ ...r, note: r.note.filter(n => n.k !== "Pattern") }));
+      const lines = sec.blocks.find(x => x.t === "lines");
+      if (lines) lines.rows.push(...rows);
+      else sec.blocks.unshift({ ...b, rows });
+    });
+  });
+  return out;
+}
 function renderStudy(){
   const v = $("view-study");
   const u = L.units.find(x => x.n === state.unit);
@@ -59,8 +77,8 @@ function renderStudy(){
   }
   const i = L.units.indexOf(u), next = L.units[i + 1];
   v.innerHTML = (onlyLesson ? "" : `<button class="linkbtn" type="button" data-unit="">← All units</button>`) +
-    `<div class="unit-head"><h2>${onlyLesson ? "" : `Unit ${u.n} · `}${inline(u.title)}</h2><p>${inline(u.goal)}</p></div>` +
-    u.sections.map(sectionHTML).join("") +
+    `<div class="unit-head"><h2>${onlyLesson ? "" : `Unit ${u.n} · `}${inline(u.title)}</h2><p>${onlyLesson ? "You'll learn to " : ""}${inline(u.goal)}</p></div>` +
+    (onlyLesson ? lessonSections(u) : u.sections).map(sectionHTML).join("") +
     (u.n >= 1 ? `<button class="btn got" type="button" data-practise="${u.n}">Practise ${onlyLesson ? "these" : `Unit ${u.n}`} flashcards</button>` : "") +
     (next && !onlyLesson ? `<button class="btn wide" type="button" data-unit="${next.n}">Next: Unit ${next.n} · ${inline(next.title)}</button>` : "");
 }

@@ -131,16 +131,16 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":
 const player = new Audio();
 
 const unit = LESSONS.units.find(u => u.n === 8);
-const groups = [{ title: "Sentences", cards: [] }, { title: "Words", cards: [] }, { title: "Conversation", cards: [] }];
+const groups = [{ title: "Sentences", cards: [] }, { title: "Words", cards: [] }];
 const seen = new Set();
 unit.sections.forEach(sec => {
-  const g = groups[sec.title.startsWith("Words") ? 1 : sec.title === "Conversation" ? 2 : 0];
+  const g = groups[sec.title.startsWith("Words") ? 1 : 0];
   sec.blocks.filter(b => b.t === "lines" || b.t === "talk").forEach(b => b.rows.forEach(r => {
     const it = b.t === "talk" ? r : r.items[0];
     const en = b.t === "talk" ? r.en : (r.note.find(n => n.k === "English") || {}).v;
     if (!en || seen.has(it.a)) return;
     seen.add(it.a);
-    g.cards.push({ zh: it.zh, py: it.py, en, a: it.a, on: b.t !== "talk", star: STARRED.includes(it.zh) });
+    g.cards.push({ zh: it.zh, py: it.py, en, a: it.a, on: true, star: STARRED.includes(it.zh) });
   }));
 });
 LESSONS.units.flatMap(u => u.sections).flatMap(sec => sec.blocks).filter(b => b.t === "lines").forEach(b => b.rows.forEach(r => {
