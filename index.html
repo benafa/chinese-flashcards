@@ -313,7 +313,7 @@ const MODES = [
 ];
 const DECKS = [["words","Words"],["sentences","Sentences"]];
 
-const state = { mode:"read", deck:"words", units:new Set(Object.keys(UNITS).map(Number)), queue:[], total:0, got:0, missed:[], revealed:false, autoplay:true, slow:false, higher:false, voice:"m", muted:false };
+const state = { mode:"both", deck:"words", units:new Set(Object.keys(UNITS).map(Number)), queue:[], total:0, got:0, missed:[], revealed:false, autoplay:true, slow:false, higher:false, voice:"m", muted:false };
 try { const v = localStorage.getItem("voiceGender"); if (v === "m" || v === "f") state.voice = v; } catch (e) {}
 try { state.muted = localStorage.getItem("muted") === "1"; } catch (e) {}
 
