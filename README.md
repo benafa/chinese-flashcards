@@ -1,3 +1,3 @@
 # Chinese Flashcards
 
-Chinese lesson flashcards: words and sentences with pinyin, English and audio.
+Chinese lesson flashcards, study notes and a searchable reference, with pinyin, English and audio.

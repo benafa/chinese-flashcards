@@ -197,17 +197,26 @@ kbd { font: inherit; font-weight: 600; color: var(--ink); background: var(--surf
   .btn:active, .play:active, .summary:active { transform: none; }
 }
 </style>
+<link rel="stylesheet" href="study.css">
 
 <div class="wrap">
   <header class="top">
     <span class="mark" aria-hidden="true">学</span>
     <div class="title">
       <h1>Chinese Flashcards</h1>
-      <p>Units 1–9 · words and sentences</p>
+      <p>Cards, lesson notes and reference</p>
     </div>
     <button class="iconbtn" type="button" id="mute" aria-label="Mute" title="Mute (M)" aria-pressed="false"></button>
+    <button class="iconbtn" type="button" id="opengear" aria-label="Sound and card settings" title="Settings" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h9M18 7h2M4 17h2M11 17h9"/><circle cx="15.5" cy="7" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="17" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
   </header>
 
+  <nav class="tabs" id="tabs" aria-label="Sections">
+    <button type="button" data-tab="cards" aria-selected="true">Cards</button>
+    <button type="button" data-tab="study" aria-selected="false">Study</button>
+    <button type="button" data-tab="ref" aria-selected="false">Reference</button>
+  </nav>
+
+  <div class="view" id="view-cards">
   <button class="summary" type="button" id="openset" aria-haspopup="dialog">
     <span class="sumtext"><b id="summode"></b><span id="sumrest"></span></span>
     <span class="sumgo"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h9M18 7h2M4 17h2M11 17h9"/><circle cx="15.5" cy="7" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="17" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>Settings</span>
@@ -221,6 +230,9 @@ kbd { font: inherit; font-weight: 600; color: var(--ink); background: var(--surf
   <div class="card" id="card" tabindex="0" role="button" aria-live="polite"></div>
   <div class="actions" id="actions"></div>
   <p class="keys"><kbd>Space</kbd> reveal · <kbd>1</kbd> Again · <kbd>2</kbd> Got it · <kbd>P</kbd> Play · <kbd>M</kbd> Mute</p>
+  </div>
+  <div class="view notes" id="view-study" hidden></div>
+  <div class="view notes" id="view-ref" hidden></div>
 </div>
 
 <dialog class="settings" id="settings" aria-labelledby="settitle">
@@ -313,7 +325,7 @@ const MODES = [
 ];
 const DECKS = [["words","Words"],["sentences","Sentences"]];
 
-const state = { mode:"both", deck:"words", units:new Set(Object.keys(UNITS).map(Number)), queue:[], total:0, got:0, missed:[], revealed:false, autoplay:true, slow:false, higher:false, voice:"m", muted:false };
+const state = { mode:"both", deck:"words", units:new Set(Object.keys(UNITS).map(Number)), queue:[], total:0, got:0, missed:[], revealed:false, autoplay:true, slow:false, higher:false, tab:"cards", unit:null, voice:"m", muted:false };
 try { const v = localStorage.getItem("voiceGender"); if (v === "m" || v === "f") state.voice = v; } catch (e) {}
 try { state.muted = localStorage.getItem("muted") === "1"; } catch (e) {}
 
@@ -351,7 +363,7 @@ function setVoice(v) {
   state.voice = v;
   try { localStorage.setItem("voiceGender", v); } catch (e) {}
   renderControls();
-  if (canPlay()) playCard(state.queue[0]);
+  if (state.tab === "cards" && canPlay()) playCard(state.queue[0]);
 }
 
 // Muted: stop anything playing now; playCard and speak refuse while it is on
@@ -496,10 +508,13 @@ function canPlay(){ return !state.muted && (state.revealed || state.mode !== "sa
 function stopAudio(){
   try { player.pause(); } catch (e) {}
   try { speechSynthesis.cancel(); } catch (e) {}
+  player.onended = null;
+  if (window.clearSay) clearSay();
 }
 function playCard(c){
   if (!c || state.muted) return;
   try { speechSynthesis.cancel(); } catch (e) {}
+  player.onended = null;
   player.onerror = () => speak(c[0]);
   player.src = (state.voice === "m" ? "audio-m/" : "audio/") + c.audio;
   player.preservesPitch = true;
@@ -553,13 +568,14 @@ function again(){
 $("card").addEventListener("click", reveal);
 $("mute").addEventListener("click", () => setMuted(!state.muted));
 $("openset").addEventListener("click", () => $("settings").showModal());
+$("opengear").addEventListener("click", () => $("settings").showModal());
 $("closeset").addEventListener("click", () => $("settings").close());
 $("settings").addEventListener("click", e => { if (e.target === $("settings")) $("settings").close(); });
 document.addEventListener("keydown", e => {
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.metaKey || e.ctrlKey || e.altKey || e.target.matches("input")) return;
   const inSheet = $("settings").open;
   if (e.key === "m" || e.key === "M") { if (!e.repeat) setMuted(!state.muted); return; }
-  if (inSheet) return;
+  if (inSheet || state.tab !== "cards") return;
   const onControl = e.target.closest && e.target.closest("button,select");
   if (e.key === " " || e.key === "Enter") { if (onControl) return; e.preventDefault(); state.revealed ? got() : reveal(); }
   else if (e.key === "1") again();
@@ -570,5 +586,7 @@ document.addEventListener("keydown", e => {
 renderControls();
 start();
 </script>
+<script src="lessons.js"></script>
+<script src="study.js"></script>
 
 </body></html>
