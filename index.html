@@ -197,7 +197,7 @@ kbd { font: inherit; font-weight: 600; color: var(--ink); background: var(--surf
   .btn:active, .play:active, .summary:active { transform: none; }
 }
 </style>
-<link rel="stylesheet" href="study.css?v=4">
+<link rel="stylesheet" href="study.css?v=5">
 
 <div class="wrap">
   <header class="top">
@@ -396,7 +396,6 @@ function fitUnits() {
 }
 
 function unitSummary() {
-  if (document.documentElement.classList.contains("one-lesson")) return "This lesson";
   if (state.units.size === 9) return "All units";
   if (state.units.size === 1) return "Unit " + [...state.units][0];
   return state.units.size + " units";
@@ -484,7 +483,7 @@ function renderCard() {
   const [zh, py, en, u] = state.queue[0];
   const long = zh.length > 5;
   $("count").textContent = "Card " + (state.got + 1) + " of " + state.total;
-  const tag = document.documentElement.classList.contains("one-lesson") ? "" : `<span class="tag">Unit ${u} · ${UNITS[u]}</span>`;
+  const tag = `<span class="tag">Unit ${u} · ${UNITS[u]}</span>`;
   const hz = `<div class="hanzi${long ? " long" : ""}">${esc(zh)}</div>`;
   const pyEl = `<div class="pinyin${long ? " long" : ""}">${esc(py)}</div>`;
   const enEl = `<div class="english">${esc(en)}</div>`;
@@ -527,7 +526,7 @@ function playCard(c){
   try { speechSynthesis.cancel(); } catch (e) {}
   player.onended = null;
   player.onerror = () => speak(c[0]);
-  player.src = c.clip ? "audio-study/" + state.voice + "/" + c.clip + ".mp3" : (state.voice === "m" ? "audio-m/" : "audio/") + c.audio;
+  player.src = (state.voice === "m" ? "audio-m/" : "audio/") + c.audio;
   player.preservesPitch = true;
   player.playbackRate = state.slow ? 0.7 : 1;
   const p = player.play();
@@ -597,7 +596,7 @@ document.addEventListener("keydown", e => {
 renderControls();
 start();
 </script>
-<script src="lessons.js?v=4"></script>
-<script src="study.js?v=4"></script>
+<script src="lessons.js?v=5"></script>
+<script src="study.js?v=5"></script>
 
 </body></html>

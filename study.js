@@ -1,8 +1,6 @@
 /* Study and Reference tabs. Data lives in lessons.js; sound goes through the same player, voice, Slow and Mute as the cards */
 const ICON_SAY = `<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 8.5a5 5 0 0 1 0 7"/></svg>`;
 const L = window.LESSONS;
-// ?lesson=8 shows one student just that lesson: its notes and its flashcards
-const onlyLesson = L.units.some(x => x.n === Number(new URLSearchParams(location.search).get("lesson"))) ? Number(new URLSearchParams(location.search).get("lesson")) : null;
 let saying = null;
 
 function inline(s){
@@ -49,50 +47,6 @@ function block(b){
 function sectionHTML(s){ return `<section class="sec">${s.title ? `<h3>${inline(s.title)}</h3>` : ""}${s.blocks.map(block).join("")}</section>`; }
 
 /* Study */
-// Words in the tutor's notes for a lesson that the lesson doc filed under another unit
-const LESSON_EXTRA = { 8: ["手机", "电脑", "沙发", "桌子", "椅子", "床", "冰箱", "洗衣机", "书", "花"] };
-// Plain headings for a single lesson page: words grouped together, no pattern labels, no links to other units
-function lessonSections(u){
-  const out = [];
-  u.sections.forEach(s => {
-    const title = s.title === "Patterns" ? "Sentences" : s.title.startsWith("Words") ? "Words" : s.title;
-    let sec = out.find(x => x.title === title);
-    if (!sec) out.push(sec = { title, blocks: [] });
-    s.blocks.forEach(b => {
-      if (b.t === "p") return sec.blocks.push({ ...b, h: b.h.replace(/ \(Unit \d+\)/g, "") });
-      if (b.t !== "lines") return sec.blocks.push(b);
-      const rows = b.rows.map(r => ({ ...r, note: r.note.filter(n => n.k !== "Pattern") }));
-      const lines = sec.blocks.find(x => x.t === "lines");
-      if (lines) lines.rows.push(...rows);
-      else sec.blocks.unshift({ ...b, rows });
-    });
-  });
-  const words = out.find(x => x.title === "Words").blocks.find(b => b.t === "lines");
-  const have = new Set(words.rows.map(r => r.items[0].a));
-  (LESSON_EXTRA[u.n] || []).forEach(zh => {
-    const r = L.units.flatMap(x => x.sections).flatMap(s => s.blocks).filter(b => b.t === "lines").flatMap(b => b.rows).find(x => x.items[0].zh === zh);
-    if (r && !have.has(r.items[0].a)) { have.add(r.items[0].a); words.rows.push({ ...r, note: r.note.filter(n => n.k === "English") }); }
-  });
-  return out;
-}
-// A lesson's flashcards are every word and sentence on its page
-function useLessonDecks(u){
-  const secs = lessonSections(u), seen = new Set();
-  const fill = (deck, rows) => {
-    deck.length = 0;
-    rows.forEach(r => {
-      if (seen.has(r.a)) return;
-      seen.add(r.a);
-      const c = [r.zh, r.py, r.en, u.n];
-      c.clip = r.a;
-      deck.push(c);
-    });
-  };
-  const lineRows = t => secs.find(s => s.title === t).blocks.filter(b => b.t === "lines").flatMap(b => b.rows)
-    .map(r => ({ ...r.items[0], en: (r.note.find(n => n.k === "English") || {}).v })).filter(r => r.en);
-  fill(WORDS, lineRows("Words"));
-  fill(SENTENCES, [...lineRows("Sentences"), ...secs.find(s => s.title === "Conversation").blocks.filter(b => b.t === "talk").flatMap(b => b.rows)]);
-}
 function renderStudy(){
   const v = $("view-study");
   const u = L.units.find(x => x.n === state.unit);
@@ -102,11 +56,11 @@ function renderStudy(){
     return;
   }
   const i = L.units.indexOf(u), next = L.units[i + 1];
-  v.innerHTML = (onlyLesson ? "" : `<button class="linkbtn" type="button" data-unit="">← All units</button>`) +
-    `<div class="unit-head"><h2>${onlyLesson ? "" : `Unit ${u.n} · `}${inline(u.title)}</h2><p>${onlyLesson ? "You'll learn to " : ""}${inline(u.goal)}</p></div>` +
-    (onlyLesson ? lessonSections(u) : u.sections).map(sectionHTML).join("") +
-    (u.n >= 1 ? `<button class="btn got" type="button" data-practise="${u.n}">Practise ${onlyLesson ? "these" : `Unit ${u.n}`} flashcards</button>` : "") +
-    (next && !onlyLesson ? `<button class="btn wide" type="button" data-unit="${next.n}">Next: Unit ${next.n} · ${inline(next.title)}</button>` : "");
+  v.innerHTML = `<button class="linkbtn" type="button" data-unit="">← All units</button>
+    <div class="unit-head"><h2>Unit ${u.n} · ${inline(u.title)}</h2><p>${inline(u.goal)}</p></div>` +
+    u.sections.map(sectionHTML).join("") +
+    (u.n >= 1 ? `<button class="btn got" type="button" data-practise="${u.n}">Practise Unit ${u.n} flashcards</button>` : "") +
+    (next ? `<button class="btn wide" type="button" data-unit="${next.n}">Next: Unit ${next.n} · ${inline(next.title)}</button>` : "");
 }
 function openUnit(n){
   stopAudio();
@@ -150,7 +104,7 @@ const TABS = ["cards", "study", "ref"];
 function setTab(t){
   if (state.tab !== t) stopAudio();
   state.tab = t;
-  if (!onlyLesson) try { localStorage.setItem("tab", t); } catch (e) {}
+  try { localStorage.setItem("tab", t); } catch (e) {}
   document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t ? "true" : "false"));
   TABS.forEach(x => { $("view-" + x).hidden = x !== t; });
   window.scrollTo(0, 0);
@@ -184,16 +138,7 @@ try {
   const u = localStorage.getItem("studyUnit");
   state.unit = u === null || u === "" ? null : Number(u);
 } catch (e) { state.unit = null; }
-if (onlyLesson) {
-  state.unit = onlyLesson;
-  state.units = new Set([onlyLesson]);
-  document.documentElement.classList.add("one-lesson");
-  document.querySelector('#tabs [data-tab="ref"]').hidden = true;
-  $("units").closest(".group").hidden = true;
-  useLessonDecks(L.units.find(x => x.n === onlyLesson));
-  renderControls(); start();
-}
 renderStudy();
 renderRef();
 let savedTab = null; try { savedTab = localStorage.getItem("tab"); } catch (e) {}
-setTab(onlyLesson ? "study" : TABS.includes(savedTab) ? savedTab : "cards");
+setTab(TABS.includes(savedTab) ? savedTab : "cards");

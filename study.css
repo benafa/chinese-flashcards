@@ -71,6 +71,3 @@ details.group[open] > summary::after { content: "–"; }
 details.group > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 14px; }
 .groupbody { display: flex; flex-direction: column; gap: 12px; padding: 0 12px 14px; }
 .none { color: var(--muted); text-align: center; padding: 24px 0; margin: 0; }
-
-/* One lesson, for a single student: no other units to choose from */
-.one-lesson .tabs { grid-template-columns: repeat(2, 1fr); }
