@@ -396,6 +396,7 @@ function fitUnits() {
 }
 
 function unitSummary() {
+  if (document.documentElement.classList.contains("one-lesson")) return "This lesson";
   if (state.units.size === 9) return "All units";
   if (state.units.size === 1) return "Unit " + [...state.units][0];
   return state.units.size + " units";

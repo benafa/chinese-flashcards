@@ -1,6 +1,8 @@
 /* Study and Reference tabs. Data lives in lessons.js; sound goes through the same player, voice, Slow and Mute as the cards */
 const ICON_SAY = `<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 8.5a5 5 0 0 1 0 7"/></svg>`;
 const L = window.LESSONS;
+// ?lesson=8 shows one student just that lesson: its notes and its flashcards
+const onlyLesson = L.units.some(x => x.n === Number(new URLSearchParams(location.search).get("lesson"))) ? Number(new URLSearchParams(location.search).get("lesson")) : null;
 let saying = null;
 
 function inline(s){
@@ -56,11 +58,11 @@ function renderStudy(){
     return;
   }
   const i = L.units.indexOf(u), next = L.units[i + 1];
-  v.innerHTML = `<button class="linkbtn" type="button" data-unit="">← All units</button>
-    <div class="unit-head"><h2>Unit ${u.n} · ${inline(u.title)}</h2><p>${inline(u.goal)}</p></div>` +
+  v.innerHTML = (onlyLesson ? "" : `<button class="linkbtn" type="button" data-unit="">← All units</button>`) +
+    `<div class="unit-head"><h2>${onlyLesson ? "" : `Unit ${u.n} · `}${inline(u.title)}</h2><p>${inline(u.goal)}</p></div>` +
     u.sections.map(sectionHTML).join("") +
-    (u.n >= 1 ? `<button class="btn got" type="button" data-practise="${u.n}">Practise Unit ${u.n} flashcards</button>` : "") +
-    (next ? `<button class="btn wide" type="button" data-unit="${next.n}">Next: Unit ${next.n} · ${inline(next.title)}</button>` : "");
+    (u.n >= 1 ? `<button class="btn got" type="button" data-practise="${u.n}">Practise ${onlyLesson ? "these" : `Unit ${u.n}`} flashcards</button>` : "") +
+    (next && !onlyLesson ? `<button class="btn wide" type="button" data-unit="${next.n}">Next: Unit ${next.n} · ${inline(next.title)}</button>` : "");
 }
 function openUnit(n){
   stopAudio();
@@ -104,7 +106,7 @@ const TABS = ["cards", "study", "ref"];
 function setTab(t){
   if (state.tab !== t) stopAudio();
   state.tab = t;
-  try { localStorage.setItem("tab", t); } catch (e) {}
+  if (!onlyLesson) try { localStorage.setItem("tab", t); } catch (e) {}
   document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === t ? "true" : "false"));
   TABS.forEach(x => { $("view-" + x).hidden = x !== t; });
   window.scrollTo(0, 0);
@@ -138,7 +140,15 @@ try {
   const u = localStorage.getItem("studyUnit");
   state.unit = u === null || u === "" ? null : Number(u);
 } catch (e) { state.unit = null; }
+if (onlyLesson) {
+  state.unit = onlyLesson;
+  state.units = new Set([onlyLesson]);
+  document.documentElement.classList.add("one-lesson");
+  document.querySelector('#tabs [data-tab="ref"]').hidden = true;
+  $("units").closest(".group").hidden = true;
+  renderControls(); start();
+}
 renderStudy();
 renderRef();
 let savedTab = null; try { savedTab = localStorage.getItem("tab"); } catch (e) {}
-setTab(TABS.includes(savedTab) ? savedTab : "cards");
+setTab(onlyLesson ? "study" : TABS.includes(savedTab) ? savedTab : "cards");

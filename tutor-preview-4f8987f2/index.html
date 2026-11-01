@@ -76,6 +76,10 @@ label.lab, .lab { display: block; font-weight: 600; margin-bottom: 6px; }
 textarea { width: 100%; min-height: 84px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); resize: vertical; }
 .btn { display: block; width: 100%; min-height: 50px; padding: 10px 16px; border: 1px solid var(--accent); border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 .btn.ghost { background: transparent; color: var(--accent-text); border-color: var(--line); }
+a.btn { text-align: center; text-decoration: none; line-height: 28px; }
+.notes { margin-top: 12px; }
+.notes summary { min-height: 44px; display: flex; align-items: center; font-weight: 600; cursor: pointer; }
+.notes pre { margin: 0; padding: 12px; border-radius: 10px; background: var(--bg); font: 400 .95rem/1.7 var(--font-hanzi); white-space: pre-wrap; overflow-wrap: anywhere; }
 .bar { position: sticky; bottom: 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 22%); }
 .split { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; align-items: start; }
 .phone { max-width: 340px; margin: 0 auto; width: 100%; padding: 14px; border: 8px solid var(--ink); border-radius: 30px; background: var(--bg); }
@@ -110,28 +114,44 @@ const STAR = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"
 const ICON = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 8.5a5 5 0 0 1 0 7"/></svg>`;
 const STEPS = ["1 · Add lesson", "2 · Review", "3 · Student view", "4 · Next lesson"];
 const STARRED = ["我做了按摩。", "我没有做按摩。"];
-const LESSON_FILE = "Lesson 8 - This and that.pdf";
+const LESSON_FILE = "6. This:that.pdf";
+const NOTES = `按àn 摩mó massages
+做 zuò - to do
+Action + 了le = action is completed
+我wǒ做zuò了le 按àn 摩mó。
+他tā 昨zuó天tiān在zài 办bàn公gōng室shì 。
+有yǒu Have  没méi有yǒu don't have // didn't
+这zhè是shì 什shén么me？What is this？
+这zhè是shì This is  那nà 是shì That is
+书 shū - book  树 shù - tree
+房 fáng 子 zi - house  窗 chuāng 户 hu - window`;
+const EXTRA = ["手机", "电脑", "沙发", "桌子", "椅子", "床", "冰箱", "洗衣机", "书", "花"];
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const player = new Audio();
 
 const unit = LESSONS.units.find(u => u.n === 8);
-const groups = [];
+const groups = [{ title: "Sentences", cards: [] }, { title: "Words", cards: [] }, { title: "Conversation", cards: [] }];
 const seen = new Set();
 unit.sections.forEach(sec => {
-  const cards = [];
+  const g = groups[sec.title.startsWith("Words") ? 1 : sec.title === "Conversation" ? 2 : 0];
   sec.blocks.filter(b => b.t === "lines" || b.t === "talk").forEach(b => b.rows.forEach(r => {
     const it = b.t === "talk" ? r : r.items[0];
     const en = b.t === "talk" ? r.en : (r.note.find(n => n.k === "English") || {}).v;
     if (!en || seen.has(it.a)) return;
     seen.add(it.a);
-    cards.push({ zh: it.zh, py: it.py, en, a: it.a, on: b.t !== "talk", star: STARRED.includes(it.zh) });
+    g.cards.push({ zh: it.zh, py: it.py, en, a: it.a, on: b.t !== "talk", star: STARRED.includes(it.zh) });
   }));
-  if (cards.length) groups.push({ title: sec.title, cards });
 });
+LESSONS.units.flatMap(u => u.sections).flatMap(sec => sec.blocks).filter(b => b.t === "lines").forEach(b => b.rows.forEach(r => {
+  const it = r.items[0], en = (r.note.find(n => n.k === "English") || {}).v;
+  if (!en || !EXTRA.includes(it.zh) || seen.has(it.a)) return;
+  seen.add(it.a);
+  groups[1].cards.push({ zh: it.zh, py: it.py, en, a: it.a, on: true, star: false });
+}));
 const allCards = groups.flatMap(g => g.cards);
 
-const state = { step: 0, reached: 0, note: "Nice work today! Spend a few minutes on 了 and 没有 before Thursday.", queue: [], shown: false, done: 0, got: 0, missed: [] };
+const state = { step: 0, reached: 0, note: "Nice work today! Spend a few minutes on 了 and 没有 before our next lesson.", queue: [], shown: false, done: 0, got: 0, missed: [] };
 
 const chosen = () => allCards.filter(c => c.on);
 const ordered = () => [...chosen().filter(c => c.star), ...chosen().filter(c => !c.star)];
@@ -156,9 +176,9 @@ function whoHTML(extra) {
 
 function renderAdd() {
   $("view").innerHTML = `<section class="panel">
-    ${whoHTML("Beginner Mandarin · 8 lessons so far")}
+    ${whoHTML("Beginner Mandarin")}
     <button type="button" class="drop" id="drop" style="margin-top:0"><b>Add today's lesson</b><span>PDF, slides or notes</span></button>
-    <p class="hint">In this prototype, this loads “${esc(LESSON_FILE)}”.</p>
+    <p class="hint">In this prototype, this loads real lesson notes: “${esc(LESSON_FILE)}”.</p>
   </section>`;
   $("drop").onclick = work;
 }
@@ -187,7 +207,8 @@ function rowHTML(c) {
 
 function renderReview() {
   $("view").innerHTML = `<section class="panel"><h2>These cards came from your lesson</h2>
-      <p class="hint">Tap the star on anything Ben should practise first. Untick anything you don't want to send.</p></section>
+      <p class="hint">Tap the star on anything Ben should practise first. Untick anything you don't want to send.</p>
+      <details class="notes"><summary>Your notes: ${esc(LESSON_FILE)}</summary><pre>${esc(NOTES)}</pre></details></section>
     ${groups.map(g => `<section class="panel"><h2>${esc(g.title)}</h2>${g.cards.map(rowHTML).join("")}</section>`).join("")}
     <section class="panel"><label class="lab" for="note">Message to Ben</label><textarea id="note">${esc(state.note)}</textarea></section>
     <div class="bar"><button type="button" class="btn" id="send">Send ${chosen().length} cards to Ben</button></div>`;
@@ -212,6 +233,8 @@ function renderStudent() {
     <section class="panel">
       <h2>What Ben sees</h2>
       <p class="hint">Only the cards you kept, with your starred cards first and your message on top. Try a few, and mark some as “Again”.</p>
+      <p></p>
+      <a class="btn ghost" href="../?lesson=8" target="_blank" rel="noopener">Open Ben's full lesson page</a>
       <p></p>
       <button type="button" class="btn" id="next">See what comes back to the tutor</button>
     </section>
