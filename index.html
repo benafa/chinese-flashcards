@@ -1,0 +1,574 @@
+<!doctype html><html lang="en"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Chinese Flashcards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap">
+<style>
+/* Layout: one full-height study column — slim header, settings summary, big card, answer buttons. Settings live in a sheet. */
+:root {
+  --bg: #F1F4F2;
+  --surface: #FFFFFF;
+  --ink: #15201B;
+  --muted: #5B6862;
+  --line: #D6DED9;
+  --accent: #1E7A62;
+  --accent-soft: #DCEFE8;
+  --accent-ink: #FFFFFF;
+  --accent-text: #17604D;
+  --seal: #B0392D;
+  --seal-soft: #F6E1DE;
+  --shadow: 0 1px 2px rgba(21,32,27,.05), 0 10px 28px rgba(21,32,27,.07);
+  --backdrop: rgba(21,32,27,.42);
+  --font-hanzi: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1412; --surface: #17201C; --ink: #E6EDE9; --muted: #92A39B; --line: #2A3631;
+    --accent: #4DB393; --accent-soft: #1C3A30; --accent-ink: #0E1412; --accent-text: #7FD4B8; --seal: #E2796C; --seal-soft: #3A211E;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.28); --backdrop: rgba(0,0,0,.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1412; --surface: #17201C; --ink: #E6EDE9; --muted: #92A39B; --line: #2A3631;
+  --accent: #4DB393; --accent-soft: #1C3A30; --accent-ink: #0E1412; --accent-text: #7FD4B8; --seal: #E2796C; --seal-soft: #3A211E;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.28); --backdrop: rgba(0,0,0,.6);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html:has(dialog[open]) { overflow: hidden; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px 14px;
+}
+.wrap {
+  max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px;
+  min-height: calc(100vh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  min-height: calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+}
+button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
+/* Header */
+.top { display: flex; align-items: center; gap: 10px; }
+.mark { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; background: var(--seal); color: var(--surface); font-family: var(--font-hanzi); font-weight: 700; font-size: 1.15rem; line-height: 1; }
+.title { flex: 1; min-width: 0; }
+.top h1 { margin: 0; font-size: 1.1rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
+.top p { margin: 0; color: var(--muted); font-size: 0.8rem; line-height: 1.3; }
+.iconbtn {
+  flex: none; width: 44px; height: 44px; display: grid; place-items: center; cursor: pointer;
+  color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+}
+.iconbtn[aria-pressed="true"] { color: var(--seal); background: var(--seal-soft); border-color: var(--seal); }
+.iconbtn.nudge { animation: nudge .4s ease; }
+@keyframes nudge { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+
+/* Collapsed settings: shows what is selected, opens the sheet */
+.summary {
+  font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  min-height: 52px; padding: 6px 12px; display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; cursor: pointer;
+}
+.sumtext { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sumtext b, .sumtext span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sumtext b { font-size: 0.9rem; font-weight: 600; line-height: 1.3; }
+.sumtext span { font-size: 0.8rem; color: var(--muted); line-height: 1.3; }
+.sumgo { flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 0.85rem; font-weight: 600; color: var(--accent-text); }
+
+/* Progress */
+.meter { display: flex; flex-direction: column; gap: 4px; }
+.progress { display: flex; justify-content: space-between; align-items: baseline; font-size: 0.82rem; line-height: 1.3; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .25s ease; }
+
+/* Card */
+.card {
+  flex: 1 0 auto; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; min-height: 250px;
+  box-shadow: var(--shadow); padding: 16px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; text-align: center; cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.card.done { cursor: default; }
+.tag { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-text); background: var(--accent-soft); padding: 3px 10px; border-radius: 999px; margin-bottom: auto; }
+.hanzi { font-family: var(--font-hanzi); font-weight: 500; font-size: clamp(3.2rem, 15vw, 4.6rem); line-height: 1.15; overflow-wrap: anywhere; }
+.hanzi.long { font-size: clamp(1.7rem, 7vw, 2.4rem); }
+.pinyin { font-size: clamp(1.3rem, 5vw, 1.7rem); font-weight: 600; color: var(--accent-text); }
+.pinyin.long { font-size: 1.15rem; }
+.pinyin.front { font-size: clamp(1.8rem, 7vw, 2.6rem); }
+.pinyin.front.long { font-size: clamp(1.3rem, 5vw, 1.7rem); }
+.english { font-size: 1.1rem; color: var(--ink); }
+.prompt-en { font-size: clamp(1.4rem, 5.5vw, 1.9rem); font-weight: 600; text-wrap: balance; }
+.hint { font-size: 0.85rem; color: var(--muted); }
+.divider { width: 48px; height: 1px; background: var(--line); flex: none; }
+.play {
+  font: inherit; font-size: 0.9rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-top: auto;
+  color: var(--accent-text); background: var(--accent-soft); border: 1px solid transparent; border-radius: 999px; padding: 8px 16px; cursor: pointer;
+}
+.play.muted { color: var(--seal); background: var(--seal-soft); }
+.card:not(.done) > :last-child:not(.play) { margin-bottom: auto; }
+
+/* Answer buttons */
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn { font: inherit; font-weight: 600; font-size: 1.05rem; min-height: 54px; padding: 12px; border-radius: 14px; cursor: pointer; border: 1px solid transparent; }
+.btn:active, .play:active, .summary:active { transform: scale(.985); }
+.btn.again { background: var(--seal-soft); color: var(--seal); border-color: var(--seal); }
+.btn.got { background: var(--accent); color: var(--accent-ink); }
+.btn.wide { grid-column: 1 / -1; background: var(--accent); color: var(--accent-ink); }
+
+/* End of round */
+.done h2 { margin: 0; font-size: 1.4rem; }
+.done p { margin: 0; }
+.missed { width: 100%; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.missed div { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 6px; }
+.missed b { font-family: var(--font-hanzi); font-weight: 500; font-size: 1.1rem; }
+.missed span { color: var(--accent-text); font-weight: 600; }
+.missed em { font-style: normal; color: var(--muted); }
+
+.keys { display: none; margin: 4px 0 0; font-size: 0.8rem; color: var(--muted); text-align: center; }
+kbd { font: inherit; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; }
+
+/* Settings sheet */
+.settings {
+  border: 0; padding: 0; background: var(--bg); color: var(--ink); width: 100%; max-width: 100%; max-height: 94vh; max-height: 94dvh;
+  margin: auto 0 0; border-radius: 20px 20px 0 0; overflow: hidden; box-shadow: var(--shadow);
+}
+.settings[open] { display: flex; flex-direction: column; animation: rise .2s ease; }
+.settings::backdrop { background: var(--backdrop); }
+@keyframes rise { from { transform: translateY(24px); opacity: 0; } }
+.sheethead { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 8px 16px; border-bottom: 1px solid var(--line); }
+.sheethead h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+.closeset { font: inherit; font-weight: 600; color: var(--accent-text); background: none; border: 0; border-radius: 10px; min-height: 44px; min-width: 64px; padding: 0 12px; cursor: pointer; }
+.sheetbody { overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 14px; padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px)); }
+.group { display: flex; flex-direction: column; gap: 8px; }
+.label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 6px; }
+.row.two { display: grid; grid-template-columns: 1fr 1fr; }
+.chip {
+  font: inherit; font-size: 0.88rem; font-weight: 500; line-height: 1.25; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 999px; min-height: 44px; padding: 6px 14px; cursor: pointer;
+}
+.row.two .chip { border-radius: 12px; min-height: 52px; padding: 6px 10px; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip:disabled { opacity: 0.45; cursor: default; }
+
+/* Voice and Deck: solid either/or. Speed: lighter tinted pair with its rate, so it reads as a different kind of setting. */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; padding: 3px; background: var(--line); border-radius: 12px; }
+.seg button { font: inherit; font-size: 0.9rem; font-weight: 600; color: var(--ink); background: transparent; border: 0; border-radius: 9px; min-height: 44px; padding: 4px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg.pace { background: transparent; padding: 0; gap: 6px; }
+.seg.pace button { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; font-weight: 500; }
+.seg.pace button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+.seg.pace small { display: block; font-size: 0.72rem; line-height: 1.1; font-weight: 500; opacity: .8; font-variant-numeric: tabular-nums; }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; display: flex; flex-direction: column; }
+.panel > :not(:first-child) { border-top-width: 1px; border-top-style: solid; border-top-color: var(--line); }
+.field { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 12px; }
+.field > span { font-size: 0.95rem; font-weight: 500; }
+.field .seg { flex: 0 1 200px; }
+.switch { font: inherit; font-size: 0.95rem; font-weight: 500; color: var(--ink); background: none; border-width: 0; border-style: solid; border-color: var(--line); width: 100%; min-height: 50px; padding: 3px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; text-align: left; border-radius: 14px; }
+.switch i { flex: none; position: relative; width: 46px; height: 28px; border-radius: 14px; background: var(--muted); transition: background .15s ease; }
+.switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); transition: transform .15s ease; }
+.switch[aria-pressed="true"] i { background: var(--accent); }
+.switch.danger[aria-pressed="true"] { color: var(--seal); }
+.switch.danger[aria-pressed="true"] i { background: var(--seal); }
+.switch[aria-pressed="true"] i::after { transform: translateX(18px); }
+.mutenote { color: var(--seal); padding: 8px 12px; }
+#voicepick { font: inherit; font-size: 0.9rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; max-width: 100%; }
+
+.chip:focus-visible, .btn:focus-visible, .card:focus-visible, .play:focus-visible, .iconbtn:focus-visible,
+.summary:focus-visible, .closeset:focus-visible, .seg button:focus-visible, .switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.switch:focus-visible, .seg button:focus-visible { outline-offset: -2px; }
+.seg.pace button[aria-pressed="true"]:focus-visible, .seg button[aria-pressed="true"]:focus-visible { outline-color: var(--ink); }
+
+@media (min-width: 700px) {
+  body { padding-block: 32px 32px; }
+  .wrap { min-height: 0; gap: 14px; }
+  .top h1 { font-size: 1.3rem; }
+  .card { flex: none; min-height: 420px; padding: 20px 28px; }
+  .keys { display: block; }
+  .settings { width: 520px; margin: auto; border-radius: 20px; max-height: 86vh; }
+}
+@media (hover: hover) {
+  .summary:hover, .iconbtn:hover { border-color: var(--accent); }
+  .chip:not(:disabled):hover, .seg.pace button:hover { border-color: var(--accent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar > i, .switch i, .switch i::after { transition: none; }
+  .settings[open], .iconbtn.nudge { animation: none; }
+  .btn:active, .play:active, .summary:active { transform: none; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="mark" aria-hidden="true">学</span>
+    <div class="title">
+      <h1>Chinese Flashcards</h1>
+      <p>Units 1–9 · words and sentences</p>
+    </div>
+    <button class="iconbtn" type="button" id="mute" aria-label="Mute" title="Mute (M)" aria-pressed="false"></button>
+  </header>
+
+  <button class="summary" type="button" id="openset" aria-haspopup="dialog">
+    <span class="sumtext"><b id="summode"></b><span id="sumrest"></span></span>
+    <span class="sumgo"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 7h9M18 7h2M4 17h2M11 17h9"/><circle cx="15.5" cy="7" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="17" r="2.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>Settings</span>
+  </button>
+
+  <div class="meter">
+    <div class="progress"><span id="count"></span><span id="score"></span></div>
+    <div class="bar"><i id="fill"></i></div>
+  </div>
+
+  <div class="card" id="card" tabindex="0" role="button" aria-live="polite"></div>
+  <div class="actions" id="actions"></div>
+  <p class="keys"><kbd>Space</kbd> reveal · <kbd>1</kbd> Again · <kbd>2</kbd> Got it · <kbd>P</kbd> Play · <kbd>M</kbd> Mute</p>
+</div>
+
+<dialog class="settings" id="settings" aria-labelledby="settitle">
+  <div class="sheethead">
+    <h2 id="settitle">Settings</h2>
+    <button class="closeset" type="button" id="closeset">Done</button>
+  </div>
+  <div class="sheetbody">
+    <div class="group">
+      <span class="label">Test yourself on</span>
+      <div class="row two" id="modes"></div>
+    </div>
+
+    <div class="group">
+      <span class="label">Deck</span>
+      <div class="seg" id="decks" role="group" aria-label="Deck"></div>
+    </div>
+
+    <div class="group">
+      <span class="label">Units</span>
+      <div class="row" id="units"></div>
+    </div>
+
+    <div class="group">
+      <span class="label">Sound</span>
+      <div class="panel" id="sound"></div>
+      <select id="voicepick" aria-label="Voice" hidden></select>
+      <span class="hint" id="voicenote" hidden></span>
+    </div>
+  </div>
+</dialog>
+
+<script>
+const UNITS = {1:"Hello",2:"Numbers",3:"Dates",4:"Birthdays",5:"Where",6:"Doing",7:"Having",8:"This / that",9:"Review"};
+
+const WORDS = [
+  ["你好","nǐ hǎo","hello",1],["吗","ma","(yes/no question)",1],["呢","ne","and you?",1],["是","shì","is, am, are",1],
+  ["很","hěn","very",1],["好","hǎo","good",1],["我","wǒ","I, me",1],["你","nǐ","you",1],["他","tā","he",1],["她","tā","she",1],
+  ["我们","wǒmen","we",1],["他们","tāmen","they",1],["妈妈","māma","mom",1],
+  ["零","líng","0",2],["一","yī","1",2],["二","èr","2",2],["三","sān","3",2],["四","sì","4",2],["五","wǔ","5",2],
+  ["六","liù","6",2],["七","qī","7",2],["八","bā","8",2],["九","jiǔ","9",2],["十","shí","10",2],["十三","shísān","13",2],
+  ["二十","èrshí","20",2],["二十五","èrshíwǔ","25",2],["两","liǎng","two (of something)",2],
+  ["年","nián","year",3],["月","yuè","month",3],["号","hào","day of the month",3],["星期","xīngqī","week",3],
+  ["几","jǐ","what number, how many",3],["今天","jīntiān","today",3],["昨天","zuótiān","yesterday",3],["明天","míngtiān","tomorrow",3],
+  ["今年","jīnnián","this year",3],["去年","qùnián","last year",3],["明年","míngnián","next year",3],
+  ["星期一","xīngqī yī","Monday",3],["星期二","xīngqī èr","Tuesday",3],["星期三","xīngqī sān","Wednesday",3],
+  ["星期四","xīngqī sì","Thursday",3],["星期五","xīngqī wǔ","Friday",3],["星期六","xīngqī liù","Saturday",3],["星期天","xīngqī tiān","Sunday",3],
+  ["生日","shēngrì","birthday",4],["生日快乐","shēngrì kuàilè","Happy birthday",4],["的","de","'s (possessive)",4],
+  ["什么时候","shénme shíhou","when",4],["丈夫","zhàngfu","husband",4],["我的","wǒ de","my",4],["周年纪念日","zhōunián jìniànrì","anniversary",4],
+  ["在","zài","at, be at",5],["哪儿","nǎr","where",5],["不在","bú zài","not at",5],["和","hé","and",5],["家","jiā","home",5],
+  ["办公室","bàngōngshì","office",5],["公司","gōngsī","company",5],["商店","shāngdiàn","shop",5],["超市","chāoshì","supermarket",5],
+  ["餐厅","cāntīng","restaurant",5],["医院","yīyuàn","hospital",5],["机场","jīchǎng","airport",5],["火车站","huǒchēzhàn","train station",5],
+  ["做","zuò","to do",6],["什么","shénme","what",6],["去","qù","to go",6],["学","xué","to study, learn",6],["中文","Zhōngwén","Chinese (language)",6],
+  ["工作","gōngzuò","to work",6],["打电话","dǎ diànhuà","make a phone call",6],["唱歌","chànggē","to sing",6],["正在","zhèngzài","right now (+ verb)",6],
+  ["有","yǒu","to have",7],["没有","méiyǒu","don't have; didn't",7],["很多","hěn duō","lots of",7],["钱","qián","money",7],
+  ["手机","shǒujī","cell phone",7],["电脑","diànnǎo","computer",7],["笔记本电脑","bǐjìběn diànnǎo","laptop",7],["电视","diànshì","TV",7],
+  ["书","shū","book",7],["沙发","shāfā","sofa",7],["桌子","zhuōzi","table",7],["椅子","yǐzi","chair",7],["床","chuáng","bed",7],
+  ["冰箱","bīngxiāng","fridge",7],["洗衣机","xǐyījī","washing machine",7],["花","huā","flower",7],["植物","zhíwù","plant",7],["吃饭","chīfàn","to eat (a meal)",7],
+  ["这","zhè","this",8],["那","nà","that",8],["了","le","(action is finished)",8],["车","chē","car",8],["房子","fángzi","house",8],
+  ["窗户","chuānghu","window",8],["门","mén","door",8],["信箱","xìnxiāng","mailbox",8],["树","shù","tree",8],["笔","bǐ","pen",8],
+  ["手表","shǒubiǎo","watch",8],["按摩","ànmó","massage",8],
+  ["一起","yìqǐ","together",9],["因为","yīnwèi","because",9],["想","xiǎng","to want; to miss; to think",9],["纽约","Niǔyuē","New York",9],
+  ["哭","kū","to cry",9],["烦","fán","annoyed, annoying",9],["没劲","méijìn","boring",9],["我想死你了！","wǒ xiǎng sǐ nǐ le!","I miss you so much!",9]
+];
+
+const SENTENCES = [
+  ["你好吗？我很好。你呢？","nǐ hǎo ma? wǒ hěn hǎo. nǐ ne?","How are you? I'm very good. And you?",1],
+  ["今天是星期几？","jīntiān shì xīngqī jǐ?","What day of the week is it today?",3],
+  ["今天是10月29号，星期四。","jīntiān shì shí yuè èrshíjiǔ hào, xīngqī sì.","Today is Thursday, October 29.",3],
+  ["你的丈夫的生日是什么时候？","nǐ de zhàngfu de shēngrì shì shénme shíhou?","When is your husband's birthday?",4],
+  ["我星期一在家。","wǒ xīngqī yī zài jiā.","I'm at home on Monday.",5],
+  ["我在医院，我不在家。","wǒ zài yīyuàn, wǒ bú zài jiā.","I'm at the hospital, not at home.",5],
+  ["你在做什么？我在学中文。","nǐ zài zuò shénme? wǒ zài xué Zhōngwén.","What are you doing? I'm studying Chinese.",6],
+  ["我星期五去纽约。","wǒ xīngqī wǔ qù Niǔyuē.","I'm going to New York on Friday.",6],
+  ["我的丈夫昨天在办公室工作。","wǒ de zhàngfu zuótiān zài bàngōngshì gōngzuò.","My husband worked at the office yesterday.",7],
+  ["我家有沙发和很多植物。","wǒ jiā yǒu shāfā hé hěn duō zhíwù.","My home has a sofa and lots of plants.",7],
+  ["我没有笔记本电脑。","wǒ méiyǒu bǐjìběn diànnǎo.","I don't have a laptop.",7],
+  ["那是你的车吗？","nà shì nǐ de chē ma?","Is that your car?",8],
+  ["这是什么？","zhè shì shénme?","What is this?",8],
+  ["我昨天做了按摩。","wǒ zuótiān zuò le ànmó.","I got a massage yesterday.",8],
+  ["我和我的丈夫星期天一起去超市。","wǒ hé wǒ de zhàngfu xīngqī tiān yìqǐ qù chāoshì.","My husband and I go to the supermarket together on Sunday.",9],
+  ["你和你的丈夫一起去机场吗？","nǐ hé nǐ de zhàngfu yìqǐ qù jīchǎng ma?","Are you and your husband going to the airport together?",9]
+];
+
+const MODES = [
+  ["read","Chinese → pinyin & English"],
+  ["both","Chinese + pinyin → English"],
+  ["pinyin","Pinyin → English"],
+  ["say","English → Chinese"]
+];
+const DECKS = [["words","Words"],["sentences","Sentences"]];
+
+const state = { mode:"read", deck:"words", units:new Set(Object.keys(UNITS).map(Number)), queue:[], total:0, got:0, missed:[], revealed:false, autoplay:true, slow:false, higher:false, voice:"m", muted:false };
+try { const v = localStorage.getItem("voiceGender"); if (v === "m" || v === "f") state.voice = v; } catch (e) {}
+try { state.muted = localStorage.getItem("muted") === "1"; } catch (e) {}
+
+const $ = id => document.getElementById(id);
+
+function chip(label, pressed, onClick) {
+  const b = document.createElement("button");
+  b.className = "chip"; b.type = "button"; b.textContent = label; b.dataset.k = label;
+  b.setAttribute("aria-pressed", pressed ? "true" : "false");
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+// On/off row with a switch
+function toggle(label, on, onClick, cls) {
+  const b = chip(label, on, onClick);
+  b.className = "switch" + (cls ? " " + cls : "");
+  b.append(document.createElement("i"));
+  return b;
+}
+
+// Labelled row holding a two-option control
+function field(label, cls, opts) {
+  const f = document.createElement("div"), s = document.createElement("span"), g = document.createElement("div");
+  f.className = "field"; s.textContent = label;
+  g.className = "seg" + (cls ? " " + cls : ""); g.setAttribute("role", "group"); g.setAttribute("aria-label", label);
+  g.append(...opts); f.append(s, g);
+  return f;
+}
+
+const ICON_SOUND = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>`;
+const ICON_MUTED = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9.5l5 5M21 9.5l-5 5"/></svg>`;
+
+function setVoice(v) {
+  state.voice = v;
+  try { localStorage.setItem("voiceGender", v); } catch (e) {}
+  renderControls();
+  if (canPlay()) playCard(state.queue[0]);
+}
+
+// Muted: stop anything playing now; playCard and speak refuse while it is on
+function setMuted(on) {
+  state.muted = on;
+  try { localStorage.setItem("muted", on ? "1" : "0"); } catch (e) {}
+  if (on) stopAudio();
+  renderControls(); paintPlay();
+}
+
+function nudgeMute() {
+  const b = $("mute");
+  b.classList.remove("nudge"); void b.offsetWidth; b.classList.add("nudge");
+}
+
+function paintPlay() {
+  const b = $("play");
+  if (!b) return;
+  b.className = "play" + (state.muted ? " muted" : "");
+  b.innerHTML = state.muted ? ICON_MUTED + "Muted · tap to unmute" : ICON_SOUND + "Play";
+  b.setAttribute("aria-label", state.muted ? "Sound is muted. Unmute" : "Play pronunciation");
+}
+
+function unitSummary() {
+  if (state.units.size === 9) return "All units";
+  if (state.units.size === 1) return "Unit " + [...state.units][0];
+  return state.units.size + " units";
+}
+
+function renderSummary() {
+  $("summode").textContent = MODES.find(m => m[0] === state.mode)[1];
+  const bits = [state.deck === "words" ? "Words" : "Sentences", unitSummary(), state.voice === "m" ? "Male" : "Female"];
+  if (state.slow) bits.push("Slow");
+  if (state.muted) bits.push("Muted");
+  $("sumrest").textContent = bits.join(" · ");
+  const b = $("mute");
+  b.innerHTML = state.muted ? ICON_MUTED : ICON_SOUND;
+  b.setAttribute("aria-pressed", state.muted ? "true" : "false");
+}
+
+function renderControls() {
+  const focused = document.activeElement && document.activeElement.dataset.k;
+  const m = $("modes"); m.replaceChildren();
+  MODES.forEach(([k,l]) => m.append(chip(l, state.mode===k, () => { state.mode=k; renderControls(); state.revealed=false; renderCard(); })));
+  const d = $("decks"); d.replaceChildren();
+  DECKS.forEach(([k,l]) => d.append(chip(l, state.deck===k, () => { state.deck=k; renderControls(); start(); })));
+  const u = $("units"); u.replaceChildren();
+  const all = state.units.size === 9;
+  u.append(chip("All", all, () => { if (all) return; state.units = new Set(Object.keys(UNITS).map(Number)); renderControls(); start(); }));
+  Object.entries(UNITS).forEach(([n,l]) => {
+    const num = Number(n);
+    u.append(chip(n + " · " + l, !all && state.units.has(num), () => {
+      if (all) state.units = new Set([num]);
+      else if (state.units.has(num) && state.units.size > 1) state.units.delete(num);
+      else state.units.add(num);
+      renderControls(); start();
+    }));
+  });
+  const s = $("sound"); s.replaceChildren();
+  s.append(toggle("Mute", state.muted, () => setMuted(!state.muted), "danger"));
+  if (state.muted) { const n = document.createElement("span"); n.className = "hint mutenote"; n.textContent = "Nothing will play until you turn this off."; s.append(n); }
+  s.append(toggle("Play on reveal", state.autoplay, () => { state.autoplay = !state.autoplay; renderControls(); }));
+  s.append(field("Voice", "", [
+    chip("Male", state.voice === "m", () => setVoice("m")),
+    chip("Female", state.voice === "f", () => setVoice("f"))
+  ]));
+  const pace = (label, rate, slow) => {
+    const b = chip(label, state.slow === slow, () => { state.slow = slow; renderControls(); });
+    const r = document.createElement("small"); r.textContent = rate; b.append(r);
+    return b;
+  };
+  s.append(field("Speed", "pace", [pace("Normal", "1×", false), pace("Slow", "0.7×", true)]));
+  document.querySelectorAll(".seg .chip").forEach(b => b.className = "");
+  renderSummary();
+  if (focused) { const el = document.querySelector(`[data-k="${focused}"]`); if (el) el.focus(); }
+}
+
+function shuffle(a) { for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function start(only) {
+  const src = state.deck === "words" ? WORDS : SENTENCES;
+  const items = only ? only.slice() : src.filter(c => state.units.has(c[3]));
+  state.queue = shuffle(items.length ? items : src.slice());
+  state.total = state.queue.length; state.got = 0; state.missed = []; state.revealed = false;
+  renderCard();
+}
+
+function esc(s){ return s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function renderCard() {
+  const card = $("card"), act = $("actions");
+  $("fill").style.width = (state.total ? state.got / state.total * 100 : 0) + "%";
+  $("score").textContent = state.missed.length ? state.missed.length + " to review" : "";
+  if (!state.queue.length) {
+    $("count").textContent = "Done · " + state.got + " / " + state.total;
+    const list = state.missed.map(c => `<div><b>${esc(c[0])}</b><span>${esc(c[1])}</span><em>${esc(c[2])}</em></div>`).join("");
+    card.className = "card done";
+    card.innerHTML = `<h2>${state.missed.length ? "Round done" : "Perfect round"}</h2>` +
+      `<p class="hint">${state.missed.length ? "These tripped you up:" : "You got every card first or second time."}</p>` +
+      (list ? `<div class="missed">${list}</div>` : "");
+    act.innerHTML = (state.missed.length ? `<button class="btn again" type="button" id="redo">Practice these ${state.missed.length}</button>` : "") +
+      `<button class="btn got" type="button" id="restart"${state.missed.length ? "" : ' style="grid-column:1/-1"'}>Start over</button>`;
+    if ($("redo")) $("redo").onclick = () => start(state.missed);
+    $("restart").onclick = () => start();
+    return;
+  }
+  const [zh, py, en, u] = state.queue[0];
+  const long = zh.length > 5;
+  $("count").textContent = "Card " + (state.got + 1) + " of " + state.total;
+  const tag = `<span class="tag">Unit ${u} · ${UNITS[u]}</span>`;
+  const hz = `<div class="hanzi${long ? " long" : ""}">${esc(zh)}</div>`;
+  const pyEl = `<div class="pinyin${long ? " long" : ""}">${esc(py)}</div>`;
+  const enEl = `<div class="english">${esc(en)}</div>`;
+  let front, back;
+  if (state.mode === "read") { front = hz; back = pyEl + enEl; }
+  else if (state.mode === "both") { front = hz + pyEl; back = enEl; }
+  else if (state.mode === "pinyin") { front = pyEl.replace('class="pinyin', 'class="pinyin front'); back = enEl + hz; }
+  else { front = `<div class="prompt-en">${esc(en)}</div>`; back = hz + pyEl; }
+  card.className = "card";
+  const showPlay = state.revealed || state.mode !== "say";
+  const play = showPlay ? `<button class="play" type="button" id="play"></button>` : "";
+  card.innerHTML = tag + front + (state.revealed ? `<div class="divider"></div>` + back : `<div class="hint">Say it out loud, then tap to reveal</div>`) + play;
+  if ($("play")) {
+    paintPlay();
+    $("play").addEventListener("click", e => { e.stopPropagation(); state.muted ? setMuted(false) : playCard(state.queue[0]); });
+  }
+  if (state.revealed) {
+    act.innerHTML = `<button class="btn again" type="button" id="again">Again</button><button class="btn got" type="button" id="got">Got it</button>`;
+    $("again").onclick = again; $("got").onclick = got;
+  } else {
+    act.innerHTML = `<button class="btn wide" type="button" id="reveal">Reveal</button>`;
+    $("reveal").onclick = reveal;
+  }
+}
+
+function reveal(){ if (!state.queue.length || state.revealed) return; state.revealed = true; renderCard(); if (state.autoplay) playCard(state.queue[0]); }
+
+WORDS.forEach((c,i) => c.audio = "w" + i + ".mp3");
+SENTENCES.forEach((c,i) => c.audio = "s" + i + ".mp3");
+const player = new Audio();
+function canPlay(){ return !state.muted && (state.revealed || state.mode !== "say"); }
+function stopAudio(){
+  try { player.pause(); } catch (e) {}
+  try { speechSynthesis.cancel(); } catch (e) {}
+}
+function playCard(c){
+  if (!c || state.muted) return;
+  try { speechSynthesis.cancel(); } catch (e) {}
+  player.onerror = () => speak(c[0]);
+  player.src = (state.voice === "m" ? "audio-m/" : "audio/") + c.audio;
+  player.preservesPitch = true;
+  player.playbackRate = state.slow ? 0.7 : 1;
+  const p = player.play();
+  if (p && p.catch) p.catch(() => speak(c[0]));
+}
+
+let zhVoice = null;
+function pickVoice(){
+  try {
+    const vs = speechSynthesis.getVoices();
+    const zh = vs.filter(v => /^zh/i.test(v.lang)).sort((a,b) => (/CN/i.test(b.lang)) - (/CN/i.test(a.lang)));
+    let saved = null; try { saved = localStorage.getItem("voiceName"); } catch (e) {}
+    zhVoice = zh.find(v => v.name === saved) || zh[0] || null;
+    const sel = $("voicepick");
+    sel.replaceChildren(...zh.map(v => { const o = document.createElement("option"); o.value = v.name; o.textContent = v.name + " (" + v.lang + ")"; return o; }));
+    if (zhVoice) sel.value = zhVoice.name;
+    sel.hidden = true;
+    sel.onchange = () => { zhVoice = zh.find(v => v.name === sel.value) || zhVoice; try { localStorage.setItem("voiceName", sel.value); } catch (e) {} speak("你好"); };
+    const note = $("voicenote");
+    if (vs.length && !zhVoice) { note.textContent = "No Mandarin voice found on this device. Add one in your system's language or speech settings."; note.hidden = false; }
+    else note.hidden = true;
+  } catch (e) {}
+}
+function speak(text){
+  if (state.muted) return;
+  const note = $("voicenote");
+  if (!("speechSynthesis" in window)) { note.textContent = "This browser can't play speech."; note.hidden = false; return; }
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.replace(/[！？。，]/g, " "));
+    u.lang = "zh-CN";
+    if (zhVoice) u.voice = zhVoice;
+    u.rate = state.slow ? 0.55 : 0.85;
+    u.pitch = state.higher ? 1.35 : 1;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function got(){ if (!state.revealed) return; state.queue.shift(); state.got++; state.revealed=false; renderCard(); }
+function again(){
+  if (!state.revealed) return;
+  const c = state.queue.shift();
+  if (!state.missed.includes(c)) state.missed.push(c);
+  const at = Math.min(state.queue.length, 3 + Math.floor(Math.random()*3));
+  state.queue.splice(at, 0, c);
+  state.revealed=false; renderCard();
+}
+
+$("card").addEventListener("click", reveal);
+$("mute").addEventListener("click", () => setMuted(!state.muted));
+$("openset").addEventListener("click", () => $("settings").showModal());
+$("closeset").addEventListener("click", () => $("settings").close());
+$("settings").addEventListener("click", e => { if (e.target === $("settings")) $("settings").close(); });
+document.addEventListener("keydown", e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const inSheet = $("settings").open;
+  if (e.key === "m" || e.key === "M") { if (!e.repeat) setMuted(!state.muted); return; }
+  if (inSheet) return;
+  const onControl = e.target.closest && e.target.closest("button,select");
+  if (e.key === " " || e.key === "Enter") { if (onControl) return; e.preventDefault(); state.revealed ? got() : reveal(); }
+  else if (e.key === "1") again();
+  else if (e.key === "2") got();
+  else if ((e.key === "p" || e.key === "P") && state.queue.length && (state.revealed || state.mode !== "say")) { if (state.muted) nudgeMute(); else playCard(state.queue[0]); }
+});
+
+renderControls();
+start();
+</script>
+
+</body></html>
