@@ -49,6 +49,8 @@ function block(b){
 function sectionHTML(s){ return `<section class="sec">${s.title ? `<h3>${inline(s.title)}</h3>` : ""}${s.blocks.map(block).join("")}</section>`; }
 
 /* Study */
+// Words in the tutor's notes for a lesson that the lesson doc filed under another unit
+const LESSON_EXTRA = { 8: ["手机", "电脑", "沙发", "桌子", "椅子", "床", "冰箱", "洗衣机", "书", "花"] };
 // Plain headings for a single lesson page: words grouped together, no pattern labels, no links to other units
 function lessonSections(u){
   const out = [];
@@ -65,7 +67,31 @@ function lessonSections(u){
       else sec.blocks.unshift({ ...b, rows });
     });
   });
+  const words = out.find(x => x.title === "Words").blocks.find(b => b.t === "lines");
+  const have = new Set(words.rows.map(r => r.items[0].a));
+  (LESSON_EXTRA[u.n] || []).forEach(zh => {
+    const r = L.units.flatMap(x => x.sections).flatMap(s => s.blocks).filter(b => b.t === "lines").flatMap(b => b.rows).find(x => x.items[0].zh === zh);
+    if (r && !have.has(r.items[0].a)) { have.add(r.items[0].a); words.rows.push({ ...r, note: r.note.filter(n => n.k === "English") }); }
+  });
   return out;
+}
+// A lesson's flashcards are every word and sentence on its page
+function useLessonDecks(u){
+  const secs = lessonSections(u), seen = new Set();
+  const fill = (deck, rows) => {
+    deck.length = 0;
+    rows.forEach(r => {
+      if (seen.has(r.a)) return;
+      seen.add(r.a);
+      const c = [r.zh, r.py, r.en, u.n];
+      c.clip = r.a;
+      deck.push(c);
+    });
+  };
+  const lineRows = t => secs.find(s => s.title === t).blocks.filter(b => b.t === "lines").flatMap(b => b.rows)
+    .map(r => ({ ...r.items[0], en: (r.note.find(n => n.k === "English") || {}).v })).filter(r => r.en);
+  fill(WORDS, lineRows("Words"));
+  fill(SENTENCES, [...lineRows("Sentences"), ...secs.find(s => s.title === "Conversation").blocks.filter(b => b.t === "talk").flatMap(b => b.rows)]);
 }
 function renderStudy(){
   const v = $("view-study");
@@ -164,6 +190,7 @@ if (onlyLesson) {
   document.documentElement.classList.add("one-lesson");
   document.querySelector('#tabs [data-tab="ref"]').hidden = true;
   $("units").closest(".group").hidden = true;
+  useLessonDecks(L.units.find(x => x.n === onlyLesson));
   renderControls(); start();
 }
 renderStudy();
