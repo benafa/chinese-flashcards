@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Tutor Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;700&display=swap">
+<style>
+:root {
+  --bg: #F1F4F2; --surface: #FFFFFF; --ink: #15201B; --muted: #5B6862; --line: #D6DED9;
+  --accent: #1E7A62; --accent-soft: #DCEFE8; --accent-ink: #FFFFFF; --accent-text: #17604D;
+  --seal: #B0392D; --seal-soft: #F6E1DE;
+  --shadow: 0 1px 2px rgba(21,32,27,.05), 0 10px 28px rgba(21,32,27,.07);
+  --font-hanzi: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1412; --surface: #17201C; --ink: #E6EDE9; --muted: #92A39B; --line: #2A3631;
+    --accent: #4DB393; --accent-soft: #1C3A30; --accent-ink: #0E1412; --accent-text: #7FD4B8; --seal: #E2796C; --seal-soft: #3A211E;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.28);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1412; --surface: #17201C; --ink: #E6EDE9; --muted: #92A39B; --line: #2A3631;
+  --accent: #4DB393; --accent-soft: #1C3A30; --accent-ink: #0E1412; --accent-text: #7FD4B8; --seal: #E2796C; --seal-soft: #3A211E;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.28);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--font-body); }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.banner { background: var(--accent-soft); color: var(--accent-text); padding: 9px 16px; font-size: .875rem; font-weight: 500; text-align: center; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 1.6rem; line-height: 1.2; margin: 0 0 4px; font-weight: 700; }
+h2 { font-size: 1rem; margin: 0 0 8px; font-weight: 700; }
+.sub { color: var(--muted); margin: 0 0 20px; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; list-style: none; padding: 0; margin: 0 0 24px; }
+.steps button { width: 100%; min-height: 44px; padding: 6px 4px; border: 0; border-top: 3px solid var(--line); background: none; color: var(--muted); font-size: .8rem; font-weight: 600; line-height: 1.2; }
+.steps button[aria-current="step"] { color: var(--accent-text); border-color: var(--accent); }
+.steps button.seen { border-color: var(--accent); }
+.steps button:disabled { cursor: default; opacity: .65; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
+label.lab, .lab { display: block; font-weight: 600; margin-bottom: 6px; }
+.hint { color: var(--muted); font-size: .875rem; margin: 6px 0 0; }
+.who { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.avatar { width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.who b { display: block; line-height: 1.25; }
+.who span { color: var(--muted); font-size: .875rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-weight: 600; font-size: .9rem; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.drop { display: block; width: 100%; margin-top: 16px; padding: 36px 16px; border: 2px dashed var(--line); border-radius: 14px; background: var(--bg); text-align: center; }
+.drop:hover { border-color: var(--accent); }
+.drop b { display: block; font-size: 1.05rem; }
+.drop span { color: var(--muted); font-size: .9rem; }
+.working { text-align: center; padding: 32px 8px; }
+.working p { margin: 8px 0; color: var(--muted); }
+.working p.on { color: var(--ink); font-weight: 600; }
+.working p.done { color: var(--accent-text); }
+.row { display: grid; grid-template-columns: 28px minmax(0,1fr) 44px; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.row:first-of-type { border-top: 0; }
+.row input[type=checkbox] { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
+.row.off .tx { opacity: .45; }
+.zh { font-family: var(--font-hanzi); font-size: 1.15rem; font-weight: 500; line-height: 1.35; }
+.py { color: var(--muted); font-size: .875rem; }
+.en { display: block; width: 100%; margin-top: 2px; padding: 3px 6px; border: 1px solid transparent; border-radius: 6px; background: transparent; font-size: .95rem; margin-left: -6px; }
+.en:hover, .en:focus { border-color: var(--line); background: var(--bg); }
+.say { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--accent-text); display: grid; place-items: center; padding: 0; }
+.focus { border-color: var(--accent); }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); font-size: .75rem; font-weight: 600; margin-left: 6px; font-family: var(--font-body); white-space: nowrap; }
+textarea { width: 100%; min-height: 84px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); resize: vertical; }
+.btn { display: block; width: 100%; min-height: 50px; padding: 10px 16px; border: 1px solid var(--accent); border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.btn.ghost { background: transparent; color: var(--accent-text); border-color: var(--line); }
+.bar { position: sticky; bottom: 0; padding: 12px 0 calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 22%); }
+.split { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; align-items: start; }
+.phone { max-width: 340px; margin: 0 auto; width: 100%; padding: 14px; border: 8px solid var(--ink); border-radius: 30px; background: var(--bg); }
+.msg { background: var(--accent-soft); color: var(--accent-text); border-radius: 12px; padding: 10px 12px; font-size: .9rem; margin-bottom: 12px; overflow-wrap: anywhere; }
+.count { color: var(--muted); font-size: .8rem; margin: 0 0 8px; text-align: center; }
+.card { min-height: 240px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 18px 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; margin-bottom: 10px; }
+.card .zh { font-size: 1.7rem; }
+.card .py { font-size: 1rem; }
+.card .eng { font-weight: 600; }
+.acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.acts .wide { grid-column: 1 / -1; }
+.btn.again { background: var(--seal-soft); color: var(--seal); border-color: var(--seal); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+.stat { background: var(--bg); border-radius: 12px; padding: 12px 8px; text-align: center; }
+.stat b { display: block; font-size: 1.5rem; line-height: 1.1; }
+.stat span { color: var(--muted); font-size: .8rem; }
+.miss { padding: 8px 0; border-top: 1px solid var(--line); }
+@media (max-width: 680px) { .split { grid-template-columns: minmax(0,1fr); } h1 { font-size: 1.4rem; } .panel { padding: 16px; } }
+</style>
+</head>
+<body>
+<div class="banner">Prototype. It uses one lesson that's already prepared, and nothing is uploaded.</div>
+<main class="wrap">
+  <h1>Turn a lesson into practice</h1>
+  <p class="sub">A tutor's view: drop in what you taught, make it fit the student, and send it.</p>
+  <ol class="steps" id="steps"></ol>
+  <div id="view"></div>
+</main>
+<script src="../lessons.js"></script>
+<script>
+const ICON = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 8.5a5 5 0 0 1 0 7"/></svg>`;
+const STEPS = ["1 · Add lesson", "2 · Review", "3 · Student view", "4 · Next lesson"];
+const FOCI = [
+  { k: "le", label: "了 vs 没有", zh: ["了", "我做了按摩。", "我没有做按摩。"] },
+  { k: "tones", label: "Tones: 树 shù", zh: ["树"] },
+  { k: "lanka", label: "Sri Lanka", zh: ["斯里兰卡", "斯里兰卡菜"] }
+];
+const LESSON_FILE = "Lesson 8 - This and that.pdf";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const player = new Audio();
+
+const unit = LESSONS.units.find(u => u.n === 8);
+const groups = [];
+const seen = new Set();
+unit.sections.forEach(sec => {
+  const cards = [];
+  sec.blocks.filter(b => b.t === "lines" || b.t === "talk").forEach(b => b.rows.forEach(r => {
+    const it = b.t === "talk" ? r : r.items[0];
+    const en = b.t === "talk" ? r.en : (r.note.find(n => n.k === "English") || {}).v;
+    if (!en || seen.has(it.a)) return;
+    seen.add(it.a);
+    cards.push({ zh: it.zh, py: it.py, en, a: it.a, on: b.t !== "talk" });
+  }));
+  if (cards.length) groups.push({ title: sec.title, cards });
+});
+const allCards = groups.flatMap(g => g.cards);
+
+const state = { step: 0, reached: 0, foci: new Set(["le", "lanka"]), note: "Nice work today! Spend a few minutes on 了 and 没有 before Thursday.", queue: [], shown: false, done: 0, got: 0, missed: [] };
+
+const focusOf = c => FOCI.find(f => state.foci.has(f.k) && f.zh.includes(c.zh));
+const chosen = () => allCards.filter(c => c.on || focusOf(c));
+const ordered = () => [...chosen().filter(focusOf), ...chosen().filter(c => !focusOf(c))];
+
+function play(a) { player.src = "../audio-study/m/" + a + ".mp3"; const p = player.play(); if (p && p.catch) p.catch(() => {}); }
+
+function go(n) {
+  player.pause();
+  state.step = n; state.reached = Math.max(state.reached, n);
+  if (n === 2 && !state.queue.length && !state.done) state.queue = ordered();
+  render(); window.scrollTo(0, 0);
+}
+
+function renderSteps() {
+  $("steps").innerHTML = STEPS.map((s, i) =>
+    `<li><button type="button" data-go="${i}" class="${i <= state.reached ? "seen" : ""}"${i === state.step ? ' aria-current="step"' : ""}${i > state.reached ? " disabled" : ""}>${s}</button></li>`).join("");
+}
+
+function whoHTML(extra) {
+  return `<div class="who"><div class="avatar" aria-hidden="true">B</div><div><b>Ben</b><span>${extra}</span></div></div>`;
+}
+
+function focusChips() {
+  return `<div class="chips">` + FOCI.map(f => `<button type="button" class="chip" data-focus="${f.k}" aria-pressed="${state.foci.has(f.k)}">${esc(f.label)}</button>`).join("") + `</div>`;
+}
+
+function renderAdd() {
+  $("view").innerHTML = `<section class="panel">
+    ${whoHTML("Beginner Mandarin · 8 lessons so far")}
+    <span class="lab">What should Ben focus on?</span>
+    ${focusChips()}
+    <p class="hint">Sample notes. A tutor would keep these up to date for each student.</p>
+    <button type="button" class="drop" id="drop"><b>Add today's lesson</b><span>PDF, slides or notes</span></button>
+    <p class="hint">In this prototype, this loads “${esc(LESSON_FILE)}”.</p>
+  </section>`;
+  $("drop").onclick = work;
+}
+
+function work() {
+  const lines = ["Reading " + LESSON_FILE, "Pulling out words, patterns and the conversation", "Matching it to Ben's focus areas"];
+  $("view").innerHTML = `<section class="panel working" aria-live="polite">${lines.map(l => `<p>${esc(l)}</p>`).join("")}</section>`;
+  const ps = [...document.querySelectorAll(".working p")];
+  let i = 0;
+  const tick = () => {
+    ps.forEach((p, j) => { p.className = j < i ? "done" : j === i ? "on" : ""; });
+    if (i++ < lines.length) setTimeout(tick, 750); else go(1);
+  };
+  tick();
+}
+
+function rowHTML(c) {
+  const f = focusOf(c), on = c.on || f;
+  return `<div class="row${on ? "" : " off"}">
+    <input type="checkbox" data-card="${c.a}" aria-label="Include ${esc(c.zh)}"${on ? " checked" : ""}${f ? " disabled" : ""}>
+    <div class="tx"><div class="zh">${esc(c.zh)}${f ? `<span class="tag">${esc(f.label)}</span>` : ""}</div><div class="py">${esc(c.py)}</div>
+    <input class="en" data-en="${c.a}" value="${esc(c.en)}" aria-label="English for ${esc(c.zh)}"></div>
+    <button type="button" class="say" data-say="${c.a}" aria-label="Play ${esc(c.zh)}">${ICON}</button>
+  </div>`;
+}
+
+function renderReview() {
+  const focus = allCards.filter(focusOf);
+  $("view").innerHTML = `<section class="panel focus">
+      <h2>Focus for Ben</h2>
+      <div style="margin-bottom:12px">${focusChips()}</div>
+      ${focus.length ? focus.map(rowHTML).join("") : `<p class="hint">Pick a focus area to bring those cards to the front.</p>`}
+    </section>
+    ${groups.map(g => {
+      const rest = g.cards.filter(c => !focusOf(c));
+      return rest.length ? `<section class="panel"><h2>${esc(g.title)}</h2>${rest.map(rowHTML).join("")}</section>` : "";
+    }).join("")}
+    <section class="panel"><label class="lab" for="note">Message to Ben</label><textarea id="note">${esc(state.note)}</textarea></section>
+    <div class="bar"><button type="button" class="btn" id="send">Send ${chosen().length} cards to Ben</button></div>`;
+  $("note").oninput = e => { state.note = e.target.value; };
+  $("send").onclick = () => { state.queue = ordered(); state.done = state.got = 0; state.missed = []; state.shown = false; go(2); };
+}
+
+function renderPhone() {
+  const c = state.queue[0];
+  if (!c) return `<p class="count">Round finished</p><div class="card"><div class="eng">${state.done} cards practised</div><div class="py">${state.missed.length ? state.missed.length + " to go over" : "All got it"}</div></div>`;
+  return `<p class="count">Card ${state.done + 1} of ${state.done + state.queue.length}</p>
+    <div class="card"><div class="zh">${esc(c.zh)}</div><div class="py">${esc(c.py)}</div>${state.shown ? `<div class="eng">${esc(c.en)}</div>` : ""}
+    <button type="button" class="say" data-say="${c.a}" aria-label="Play">${ICON}</button></div>
+    <div class="acts">${state.shown
+      ? `<button type="button" class="btn again" data-mark="0">Again</button><button type="button" class="btn" data-mark="1">Got it</button>`
+      : `<button type="button" class="btn wide" id="reveal">Show answer</button>`}</div>`;
+}
+
+function renderStudent() {
+  $("view").innerHTML = `<div class="split">
+    <div class="phone"><div class="msg">${esc(state.note)}</div><div id="ph">${renderPhone()}</div></div>
+    <section class="panel">
+      <h2>What Ben sees</h2>
+      <p class="hint">Only the cards you kept, with Ben's focus cards first and your message on top. Try a few, and mark some as “Again”.</p>
+      <p></p>
+      <button type="button" class="btn" id="next">See what comes back to the tutor</button>
+    </section>
+  </div>`;
+  $("next").onclick = () => go(3);
+}
+
+function renderNext() {
+  const wrong = state.missed.length;
+  $("view").innerHTML = `<section class="panel">
+      ${whoHTML("Before your next lesson")}
+      <div class="stats">
+        <div class="stat"><b>${state.done}</b><span>practised</span></div>
+        <div class="stat"><b>${state.got}</b><span>got it</span></div>
+        <div class="stat"><b>${wrong}</b><span>need work</span></div>
+      </div>
+      <h2>Start the lesson with these</h2>
+      ${wrong ? state.missed.map(c => `<div class="miss"><div class="zh">${esc(c.zh)}</div><div class="py">${esc(c.py)} · ${esc(c.en)}</div></div>`).join("")
+        : `<p class="hint">${state.done ? "Nothing to go over yet." : "Nothing here yet. Practise a few cards in step 3 and mark some as “Again”."}</p>`}
+    </section>
+    <button type="button" class="btn ghost" id="restart">Start again</button>`;
+  $("restart").onclick = () => location.reload();
+}
+
+function render() {
+  renderSteps();
+  [renderAdd, renderReview, renderStudent, renderNext][state.step]();
+}
+
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-go],[data-focus],[data-say],[data-mark],#reveal");
+  if (!t) return;
+  if (t.dataset.go !== undefined) return go(Number(t.dataset.go));
+  if (t.dataset.say) return play(t.dataset.say);
+  if (t.dataset.focus) {
+    const k = t.dataset.focus;
+    if (state.foci.has(k)) state.foci.delete(k); else state.foci.add(k);
+    return render();
+  }
+  if (t.id === "reveal") { state.shown = true; play(state.queue[0].a); $("ph").innerHTML = renderPhone(); return; }
+  const c = state.queue.shift();
+  state.done++;
+  if (t.dataset.mark === "1") state.got++; else state.missed.push(c);
+  state.shown = false;
+  $("ph").innerHTML = renderPhone();
+});
+document.addEventListener("change", e => {
+  if (e.target.dataset.card) {
+    allCards.find(c => c.a === e.target.dataset.card).on = e.target.checked;
+    render();
+  }
+});
+document.addEventListener("input", e => {
+  if (e.target.dataset.en) allCards.find(c => c.a === e.target.dataset.en).en = e.target.value;
+});
+
+render();
+</script>
+</body>
+</html>
