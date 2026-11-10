@@ -40,8 +40,9 @@ function block(b){
   }).join("") + `</div>`;
   if (b.t === "talk") return `<div class="talkbar"><button class="play" type="button" data-playall>${ICON_SAY}Play conversation</button></div><div class="rows">` + b.rows.map(r =>
     `<div class="rowitem talkrow"><span class="who ${r.who === "B" ? "b" : ""} ${r.who ? "" : "none"}">${esc(r.who)}</span><div>${say(r, `<span class="en">${inline(r.en)}</span>`)}</div></div>`).join("") + `</div>`;
-  if (b.t === "test") return `<div class="rows">` + b.rows.map(r =>
-    `<div class="rowitem"><button class="reveal" type="button" aria-expanded="false"><span>${inline(r.q)}</span><em>Show</em></button><div hidden>${say(r)}</div></div>`).join("") + `</div>`;
+  if (b.t === "test") return `<p class="hint testhow">Say each one in Chinese, then check.</p><div class="rows testrows">` + b.rows.map(r =>
+    `<div class="rowitem"><button class="reveal" type="button" aria-expanded="false"><span>${inline(r.q)}</span><em>Show</em></button><div hidden>${say(r)}<div class="tmark"><button class="btn again" type="button" data-mark="0" data-zh="${esc(r.zh)}">Again</button><button class="btn got" type="button" data-mark="1" data-zh="${esc(r.zh)}">Got it</button></div></div></div>`).join("") +
+    `</div><p class="testscore" hidden></p><button class="btn wide" type="button" data-testcards="${esc(JSON.stringify(b.rows.map(r => r.zh)))}">Practise these as cards</button>`;
   return `<div class="grid" tabindex="0"><table><thead><tr>${b.head.map(h => `<th>${inline(h)}</th>`).join("")}</tr></thead><tbody>${b.rows.map(r => `<tr class="rowitem-t">${r.map(c => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
 function sectionHTML(s){ return `<section class="sec">${s.title ? `<h3>${inline(s.title)}</h3>` : ""}${s.blocks.map(block).join("")}</section>`; }
@@ -99,6 +100,21 @@ function searchRef(q){
   $("refnone").hidden = !t || any;
 }
 
+// One answer per line; the score shows once every line in the test is marked
+function markTest(btn){
+  const right = btn.dataset.mark === "1", card = SENTENCES.find(c => c[0] === btn.dataset.zh);
+  const box = btn.closest(".tmark");
+  box.dataset.done = right ? "1" : "0";
+  box.querySelectorAll("button").forEach(b => { b.disabled = true; b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
+  if (card) record(card, right);
+  const rows = btn.closest(".testrows"), marks = [...rows.querySelectorAll(".tmark")], done = marks.filter(m => m.dataset.done);
+  if (done.length === marks.length) {
+    const score = rows.nextElementSibling;
+    score.textContent = `You got ${done.filter(m => m.dataset.done === "1").length} of ${marks.length}.`;
+    score.hidden = false;
+  }
+}
+
 /* Tabs */
 const TABS = ["cards", "study", "ref"];
 function setTab(t){
@@ -111,11 +127,19 @@ function setTab(t){
 }
 
 document.querySelector(".wrap").addEventListener("click", e => {
-  const el = e.target.closest("[data-a],[data-unit],[data-practise],[data-playall],.reveal");
+  const el = e.target.closest("[data-a],[data-unit],[data-practise],[data-playall],[data-mark],[data-testcards],.reveal");
   if (!el) return;
   if (el.dataset.a) return playClip(el.dataset.a, el.dataset.zh, el);
   if (el.dataset.unit !== undefined) return openUnit(el.dataset.unit === "" ? null : Number(el.dataset.unit));
+  if (el.dataset.mark) return markTest(el);
+  if (el.dataset.testcards) {
+    const want = JSON.parse(el.dataset.testcards);
+    start(SENTENCES.filter(c => want.includes(c[0])));
+    setTab("cards");
+    return;
+  }
   if (el.dataset.practise) {
+    if (state.deck === "today") state.deck = "words";
     state.units = new Set([Number(el.dataset.practise)]);
     if (!unitHasCards(Number(el.dataset.practise))) state.deck = "words";
     renderControls(); start(); setTab("cards");
@@ -130,7 +154,6 @@ document.querySelector(".wrap").addEventListener("click", e => {
   box.hidden = !open;
   el.setAttribute("aria-expanded", open ? "true" : "false");
   el.querySelector("em").textContent = open ? "Hide" : "Show";
-  if (open && state.autoplay) { const b = box.querySelector("[data-a]"); if (b && !state.muted) playClip(b.dataset.a, b.dataset.zh, b); }
 });
 $("tabs").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setTab(b.dataset.tab); });
 

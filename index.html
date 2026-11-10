@@ -197,7 +197,7 @@ kbd { font: inherit; font-weight: 600; color: var(--ink); background: var(--surf
   .btn:active, .play:active, .summary:active { transform: none; }
 }
 </style>
-<link rel="stylesheet" href="study.css?v=5">
+<link rel="stylesheet" href="study.css?v=7">
 
 <div class="wrap">
   <header class="top">
@@ -249,6 +249,7 @@ kbd { font: inherit; font-weight: 600; color: var(--ink); background: var(--surf
     <div class="group">
       <span class="label">Deck</span>
       <div class="seg" id="decks" role="group" aria-label="Deck"></div>
+      <p class="hint" id="todaynote" hidden>Today picks up to 15 cards: ones you missed before come first, then cards from your newest units.</p>
     </div>
 
     <div class="group">
@@ -321,11 +322,22 @@ const MODES = [
   ["read","Chinese → pinyin & English"],
   ["both","Chinese + pinyin → English"],
   ["pinyin","Pinyin → English"],
-  ["say","English → Chinese"]
+  ["say","English → Chinese"],
+  ["listen","Listen → meaning"]
 ];
-const DECKS = [["words","Words"],["sentences","Sentences"]];
+const DECKS = [["today","Today"],["words","Words"],["sentences","Sentences"]];
+const HINTS = {
+  read: "Say it out loud and what it means, then tap to reveal",
+  both: "Say what it means, then tap to reveal",
+  pinyin: "Say what it means, then tap to reveal",
+  say: "Say it in Chinese, then tap to reveal",
+  listen: "Listen, say what it means, then tap to reveal"
+};
+const TODAY_SIZE = 15;
+// Days until a card comes back after each first-try "Got it" in a row
+const GAPS = [1, 2, 4, 8, 16, 30];
 
-const state = { mode:"both", deck:"words", units:new Set(Object.keys(UNITS).map(Number)), queue:[], total:0, got:0, missed:[], revealed:false, autoplay:true, slow:false, higher:false, tab:"cards", unit:null, voice:"m", muted:false };
+const state = { mode:"both", deck:"today", units:new Set(Object.keys(UNITS).map(Number)), queue:[], total:0, got:0, missed:[], revealed:false, autoplay:true, slow:false, higher:false, tab:"cards", unit:null, voice:"m", muted:false };
 try { const v = localStorage.getItem("voiceGender"); if (v === "m" || v === "f") state.voice = v; } catch (e) {}
 try { state.muted = localStorage.getItem("muted") === "1"; } catch (e) {}
 
@@ -387,7 +399,8 @@ function paintPlay() {
   b.setAttribute("aria-label", state.muted ? "Sound is muted. Unmute" : "Play pronunciation");
 }
 
-function unitHasCards(n) { return (state.deck === "words" ? WORDS : SENTENCES).some(c => c[3] === n); }
+function deckCards() { return state.deck === "words" ? WORDS : state.deck === "sentences" ? SENTENCES : [...WORDS, ...SENTENCES]; }
+function unitHasCards(n) { return deckCards().some(c => c[3] === n); }
 
 function fitUnits() {
   if (state.units.size === 9) return;
@@ -396,6 +409,7 @@ function fitUnits() {
 }
 
 function unitSummary() {
+  if (state.deck === "today") return "Picked for you";
   if (state.units.size === 9) return "All units";
   if (state.units.size === 1) return "Unit " + [...state.units][0];
   return state.units.size + " units";
@@ -403,7 +417,7 @@ function unitSummary() {
 
 function renderSummary() {
   $("summode").textContent = MODES.find(m => m[0] === state.mode)[1];
-  const bits = [state.deck === "words" ? "Words" : "Sentences", unitSummary(), state.voice === "m" ? "Male" : "Female"];
+  const bits = [DECKS.find(d => d[0] === state.deck)[1], unitSummary(), state.voice === "m" ? "Male" : "Female"];
   if (state.slow) bits.push("Slow");
   if (state.muted) bits.push("Muted");
   $("sumrest").textContent = bits.join(" · ");
@@ -418,6 +432,8 @@ function renderControls() {
   MODES.forEach(([k,l]) => m.append(chip(l, state.mode===k, () => { state.mode=k; renderControls(); state.revealed=false; renderCard(); })));
   const d = $("decks"); d.replaceChildren();
   DECKS.forEach(([k,l]) => d.append(chip(l, state.deck===k, () => { state.deck=k; fitUnits(); renderControls(); start(); })));
+  $("todaynote").hidden = state.deck !== "today";
+  $("units").closest(".group").hidden = state.deck === "today";
   const u = $("units"); u.replaceChildren();
   const all = state.units.size === 9;
   u.append(chip("All", all, () => { if (all) return; state.units = new Set(Object.keys(UNITS).map(Number)); renderControls(); start(); }));
@@ -435,13 +451,13 @@ function renderControls() {
   const s = $("sound"); s.replaceChildren();
   s.append(toggle("Mute", state.muted, () => setMuted(!state.muted), "danger"));
   if (state.muted) { const n = document.createElement("span"); n.className = "hint mutenote"; n.textContent = "Nothing will play until you turn this off."; s.append(n); }
-  s.append(toggle("Play on reveal", state.autoplay, () => { state.autoplay = !state.autoplay; renderControls(); }));
+  s.append(toggle("Play on reveal", state.autoplay, () => { state.autoplay = !state.autoplay; renderControls(); saveSettings(); }));
   s.append(field("Voice", "", [
     chip("Male", state.voice === "m", () => setVoice("m")),
     chip("Female", state.voice === "f", () => setVoice("f"))
   ]));
   const pace = (label, rate, slow) => {
-    const b = chip(label, state.slow === slow, () => { state.slow = slow; renderControls(); });
+    const b = chip(label, state.slow === slow, () => { state.slow = slow; renderControls(); saveSettings(); });
     const r = document.createElement("small"); r.textContent = rate; b.append(r);
     return b;
   };
@@ -453,11 +469,34 @@ function renderControls() {
 
 function shuffle(a) { for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
+function today() { const d = new Date(); return Math.floor((d - d.getTimezoneOffset() * 60000) / 86400000); }
+function loadProgress() { try { return JSON.parse(localStorage.getItem("progress")) || {}; } catch (e) { return {}; } }
+function saveProgress(p) { try { localStorage.setItem("progress", JSON.stringify(p)); } catch (e) {} }
+const cardKey = c => c.kind + "|" + c[0];
+
+// Cards due again come first, then cards never seen, newest unit first
+function todayCards() {
+  const p = loadProgress(), now = today(), all = [...WORDS, ...SENTENCES];
+  const due = shuffle(all.filter(c => p[cardKey(c)] && p[cardKey(c)].due <= now)).sort((a, b) => p[cardKey(a)].due - p[cardKey(b)].due);
+  const fresh = shuffle(all.filter(c => !p[cardKey(c)])).sort((a, b) => b[3] - a[3]);
+  return shuffle([...due, ...fresh].slice(0, TODAY_SIZE));
+}
+
+// Only the first answer in a round moves a card along
+function record(c, right) {
+  const p = loadProgress(), k = cardKey(c), r = p[k] || { box: -1 };
+  r.box = right ? Math.min(r.box + 1, GAPS.length - 1) : 0;
+  r.due = today() + (right ? GAPS[r.box] : 1);
+  p[k] = r;
+  saveProgress(p);
+}
+
 function start(only) {
-  const src = state.deck === "words" ? WORDS : SENTENCES;
-  const items = only ? only.slice() : src.filter(c => state.units.has(c[3]));
-  state.queue = shuffle(items.length ? items : src.slice());
-  state.total = state.queue.length; state.got = 0; state.missed = []; state.revealed = false;
+  const src = deckCards();
+  const items = only ? only.slice() : state.deck === "today" ? todayCards() : src.filter(c => state.units.has(c[3]));
+  state.queue = shuffle(items.length || state.deck === "today" ? items : src.slice());
+  state.answered = new Set();
+  state.total = state.queue.length; state.got = 0; state.missed = []; state.revealed = false; state.heard = null;
   renderCard();
 }
 
@@ -468,11 +507,20 @@ function renderCard() {
   $("fill").style.width = (state.total ? state.got / state.total * 100 : 0) + "%";
   $("score").textContent = state.missed.length ? state.missed.length + " to review" : "";
   if (!state.queue.length) {
+    saveRound();
+    if (!state.total) {
+      $("count").textContent = "";
+      card.className = "card done";
+      card.innerHTML = `<h2>Nothing due today</h2><p class="hint">You're all caught up. Come back tomorrow, or practise a whole deck.</p>`;
+      act.innerHTML = `<button class="btn got" type="button" id="alldeck" style="grid-column:1/-1">Practise all words</button>`;
+      $("alldeck").onclick = () => { state.deck = "words"; renderControls(); start(); saveSettings(); };
+      return;
+    }
     $("count").textContent = "Done · " + state.got + " / " + state.total;
     const list = state.missed.map(c => `<div><b>${esc(c[0])}</b><span>${esc(c[1])}</span><em>${esc(c[2])}</em></div>`).join("");
     card.className = "card done";
     card.innerHTML = `<h2>${state.missed.length ? "Round done" : "Perfect round"}</h2>` +
-      `<p class="hint">${state.missed.length ? "These tripped you up:" : "You got every card first or second time."}</p>` +
+      `<p class="hint">${state.missed.length ? "These tripped you up. They'll come back in Today tomorrow:" : "You got every card right first time."}</p>` +
       (list ? `<div class="missed">${list}</div>` : "");
     act.innerHTML = (state.missed.length ? `<button class="btn again" type="button" id="redo">Practice these ${state.missed.length}</button>` : "") +
       `<button class="btn got" type="button" id="restart"${state.missed.length ? "" : ' style="grid-column:1/-1"'}>Start over</button>`;
@@ -491,15 +539,18 @@ function renderCard() {
   if (state.mode === "read") { front = hz; back = pyEl + enEl; }
   else if (state.mode === "both") { front = hz + pyEl; back = enEl; }
   else if (state.mode === "pinyin") { front = pyEl.replace('class="pinyin', 'class="pinyin front'); back = enEl + hz; }
-  else { front = `<div class="prompt-en">${esc(en)}</div>`; back = hz + pyEl; }
+  else if (state.mode === "say") { front = `<div class="prompt-en">${esc(en)}</div>`; back = hz + pyEl; }
+  else { front = `<div class="prompt-en">Listen</div>`; back = hz + pyEl + enEl; }
   card.className = "card";
   const showPlay = state.revealed || state.mode !== "say";
   const play = showPlay ? `<button class="play" type="button" id="play"></button>` : "";
-  card.innerHTML = tag + front + (state.revealed ? `<div class="divider"></div>` + back : `<div class="hint">Say it out loud, then tap to reveal</div>`) + play;
+  card.innerHTML = tag + front + (state.revealed ? `<div class="divider"></div>` + back : `<div class="hint">${HINTS[state.mode]}</div>`) + play;
   if ($("play")) {
     paintPlay();
     $("play").addEventListener("click", e => { e.stopPropagation(); state.muted ? setMuted(false) : playCard(state.queue[0]); });
   }
+  saveRound();
+  if (state.mode === "listen" && !state.revealed && state.heard !== state.queue[0]) { state.heard = state.queue[0]; playCard(state.queue[0]); }
   if (state.revealed) {
     act.innerHTML = `<button class="btn again" type="button" id="again">Again</button><button class="btn got" type="button" id="got">Got it</button>`;
     $("again").onclick = again; $("got").onclick = got;
@@ -526,7 +577,7 @@ function playCard(c){
   try { speechSynthesis.cancel(); } catch (e) {}
   player.onended = null;
   player.onerror = () => speak(c[0]);
-  player.src = (state.voice === "m" ? "audio-m/" : "audio/") + c.audio;
+  player.src = c.clip ? "audio-study/" + state.voice + "/" + c.clip + ".mp3" : (state.voice === "m" ? "audio-m/" : "audio/") + c.audio;
   player.preservesPitch = true;
   player.playbackRate = state.slow ? 0.7 : 1;
   const p = player.play();
@@ -565,9 +616,11 @@ function speak(text){
   } catch (e) {}
 }
 if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
-function got(){ if (!state.revealed) return; state.queue.shift(); state.got++; state.revealed=false; renderCard(); }
+function firstAnswer(c, right) { if (!state.answered.has(c)) { state.answered.add(c); record(c, right); } }
+function got(){ if (!state.revealed) return; firstAnswer(state.queue[0], true); state.queue.shift(); state.got++; state.revealed=false; renderCard(); }
 function again(){
   if (!state.revealed) return;
+  firstAnswer(state.queue[0], false);
   const c = state.queue.shift();
   if (!state.missed.includes(c)) state.missed.push(c);
   const at = Math.min(state.queue.length, 3 + Math.floor(Math.random()*3));
@@ -593,10 +646,58 @@ document.addEventListener("keydown", e => {
   else if ((e.key === "p" || e.key === "P") && state.queue.length && (state.revealed || state.mode !== "say")) { if (state.muted) nudgeMute(); else playCard(state.queue[0]); }
 });
 
-renderControls();
-start();
+// Settings and the current round survive closing the page
+function saveSettings() {
+  try { localStorage.setItem("cardSettings", JSON.stringify({ mode: state.mode, deck: state.deck, units: [...state.units], slow: state.slow, autoplay: state.autoplay })); } catch (e) {}
+}
+function saveRound() {
+  saveSettings();
+  const keys = cs => cs.map(cardKey);
+  try { localStorage.setItem("round", JSON.stringify({ queue: keys(state.queue), missed: keys(state.missed), answered: keys([...state.answered]), total: state.total, got: state.got })); } catch (e) {}
+}
+function resume() {
+  try {
+    const s = JSON.parse(localStorage.getItem("cardSettings"));
+    if (s) {
+      if (MODES.some(m => m[0] === s.mode)) state.mode = s.mode;
+      if (DECKS.some(d => d[0] === s.deck)) state.deck = s.deck;
+      const u = (s.units || []).filter(n => UNITS[n]);
+      if (u.length) state.units = new Set(u);
+      state.slow = !!s.slow; state.autoplay = s.autoplay !== false;
+    }
+    const r = JSON.parse(localStorage.getItem("round")), byKey = new Map([...WORDS, ...SENTENCES].map(c => [cardKey(c), c]));
+    const back = ks => (ks || []).map(k => byKey.get(k)).filter(Boolean);
+    if (r && r.queue && r.queue.length && back(r.queue).length === r.queue.length) {
+      state.queue = back(r.queue); state.missed = back(r.missed); state.answered = new Set(back(r.answered));
+      state.total = r.total; state.got = r.got; state.revealed = false;
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+// Runs after lessons.js: unit names and the Test yourself sentences come from the lesson notes
+window.addEventListener("DOMContentLoaded", () => {
+  const L = window.LESSONS;
+  if (L) {
+    L.units.forEach(u => { if (UNITS[u.n]) UNITS[u.n] = u.title.split(", ")[0]; });
+    const have = new Set(SENTENCES.map(c => c[0]));
+    L.units.forEach(u => u.n >= 1 && u.sections.forEach(sec => sec.blocks.filter(b => b.t === "test").forEach(b => b.rows.forEach(r => {
+      if (have.has(r.zh)) return;
+      have.add(r.zh);
+      const c = [r.zh, r.py, r.q, u.n];
+      c.clip = r.a;
+      SENTENCES.push(c);
+    }))));
+  }
+  WORDS.forEach(c => c.kind = "w");
+  SENTENCES.forEach(c => c.kind = "s");
+  const resumed = resume();
+  renderControls();
+  if (resumed) renderCard(); else start();
+});
 </script>
-<script src="lessons.js?v=5"></script>
-<script src="study.js?v=5"></script>
+<script src="lessons.js?v=7"></script>
+<script src="study.js?v=7"></script>
 
 </body></html>
