@@ -197,7 +197,7 @@ kbd { font: inherit; font-weight: 600; color: var(--ink); background: var(--surf
   .btn:active, .play:active, .summary:active { transform: none; }
 }
 </style>
-<link rel="stylesheet" href="study.css?v=7">
+<link rel="stylesheet" href="study.css?v=8">
 
 <div class="wrap">
   <header class="top">
@@ -402,15 +402,18 @@ function paintPlay() {
 function deckCards() { return state.deck === "words" ? WORDS : state.deck === "sentences" ? SENTENCES : [...WORDS, ...SENTENCES]; }
 function unitHasCards(n) { return deckCards().some(c => c[3] === n); }
 
+const allUnits = () => Object.keys(UNITS).map(Number);
+const hasAllUnits = () => state.units.size === allUnits().length;
+
 function fitUnits() {
-  if (state.units.size === 9) return;
+  if (hasAllUnits()) return;
   const kept = [...state.units].filter(unitHasCards);
   state.units = new Set(kept.length ? kept : Object.keys(UNITS).map(Number));
 }
 
 function unitSummary() {
   if (state.deck === "today") return "Picked for you";
-  if (state.units.size === 9) return "All units";
+  if (hasAllUnits()) return "All units";
   if (state.units.size === 1) return "Unit " + [...state.units][0];
   return state.units.size + " units";
 }
@@ -435,7 +438,7 @@ function renderControls() {
   $("todaynote").hidden = state.deck !== "today";
   $("units").closest(".group").hidden = state.deck === "today";
   const u = $("units"); u.replaceChildren();
-  const all = state.units.size === 9;
+  const all = hasAllUnits();
   u.append(chip("All", all, () => { if (all) return; state.units = new Set(Object.keys(UNITS).map(Number)); renderControls(); start(); }));
   Object.entries(UNITS).forEach(([n,l]) => {
     const num = Number(n);
@@ -648,7 +651,7 @@ document.addEventListener("keydown", e => {
 
 // Settings and the current round survive closing the page
 function saveSettings() {
-  try { localStorage.setItem("cardSettings", JSON.stringify({ mode: state.mode, deck: state.deck, units: [...state.units], slow: state.slow, autoplay: state.autoplay })); } catch (e) {}
+  try { localStorage.setItem("cardSettings", JSON.stringify({ mode: state.mode, deck: state.deck, units: [...state.units], all: hasAllUnits(), slow: state.slow, autoplay: state.autoplay })); } catch (e) {}
 }
 function saveRound() {
   saveSettings();
@@ -661,8 +664,10 @@ function resume() {
     if (s) {
       if (MODES.some(m => m[0] === s.mode)) state.mode = s.mode;
       if (DECKS.some(d => d[0] === s.deck)) state.deck = s.deck;
+      // Older saves had 9 units for "All"; treat that as all, so new units show up
       const u = (s.units || []).filter(n => UNITS[n]);
-      if (u.length) state.units = new Set(u);
+      if (s.all || (s.all === undefined && u.length === 9)) state.units = new Set(allUnits());
+      else if (u.length) state.units = new Set(u);
       state.slow = !!s.slow; state.autoplay = s.autoplay !== false;
     }
     const r = JSON.parse(localStorage.getItem("round")), byKey = new Map([...WORDS, ...SENTENCES].map(c => [cardKey(c), c]));
@@ -680,7 +685,17 @@ function resume() {
 window.addEventListener("DOMContentLoaded", () => {
   const L = window.LESSONS;
   if (L) {
-    L.units.forEach(u => { if (UNITS[u.n]) UNITS[u.n] = u.title.split(", ")[0]; });
+    L.units.forEach(u => { if (u.n >= 1) UNITS[u.n] = u.title.split(", ")[0]; });
+    // Units added after the original card set get their word cards from the lesson's Words section
+    const wordUnits = new Set(WORDS.map(c => c[3]));
+    L.units.forEach(u => u.n >= 1 && !wordUnits.has(u.n) && u.sections.filter(sec => sec.title === "Words").forEach(sec => sec.blocks.filter(b => b.t === "lines").forEach(b => b.rows.forEach(r => {
+      const it = r.items[0], en = (r.note.find(n => n.k === "English") || {}).v;
+      if (!en) return;
+      const c = [it.zh, it.py, en, u.n];
+      c.clip = it.a;
+      WORDS.push(c);
+    }))));
+    state.units = new Set(allUnits());
     const have = new Set(SENTENCES.map(c => c[0]));
     L.units.forEach(u => u.n >= 1 && u.sections.forEach(sec => sec.blocks.filter(b => b.t === "test").forEach(b => b.rows.forEach(r => {
       if (have.has(r.zh)) return;
@@ -697,7 +712,7 @@ window.addEventListener("DOMContentLoaded", () => {
   if (resumed) renderCard(); else start();
 });
 </script>
-<script src="lessons.js?v=7"></script>
-<script src="study.js?v=7"></script>
+<script src="lessons.js?v=8"></script>
+<script src="study.js?v=8"></script>
 
 </body></html>
