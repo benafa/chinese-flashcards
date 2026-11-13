@@ -197,7 +197,7 @@ kbd { font: inherit; font-weight: 600; color: var(--ink); background: var(--surf
   .btn:active, .play:active, .summary:active { transform: none; }
 }
 </style>
-<link rel="stylesheet" href="study.css?v=8">
+<link rel="stylesheet" href="study.css?v=9">
 
 <div class="wrap">
   <header class="top">
@@ -687,10 +687,11 @@ window.addEventListener("DOMContentLoaded", () => {
   if (L) {
     L.units.forEach(u => { if (u.n >= 1) UNITS[u.n] = u.title.split(", ")[0]; });
     // Units added after the original card set get their word cards from the lesson's Words section
-    const wordUnits = new Set(WORDS.map(c => c[3]));
-    L.units.forEach(u => u.n >= 1 && !wordUnits.has(u.n) && u.sections.filter(sec => sec.title === "Words").forEach(sec => sec.blocks.filter(b => b.t === "lines").forEach(b => b.rows.forEach(r => {
+    const wordUnits = new Set(WORDS.map(c => c[3])), haveWord = new Set(WORDS.map(c => c[0]));
+    L.units.forEach(u => u.n >= 1 && !wordUnits.has(u.n) && u.sections.filter(sec => sec.title.startsWith("Words")).forEach(sec => sec.blocks.filter(b => b.t === "lines").forEach(b => b.rows.forEach(r => {
       const it = r.items[0], en = (r.note.find(n => n.k === "English") || {}).v;
-      if (!en) return;
+      if (!en || haveWord.has(it.zh)) return;
+      haveWord.add(it.zh);
       const c = [it.zh, it.py, en, u.n];
       c.clip = it.a;
       WORDS.push(c);
@@ -712,7 +713,7 @@ window.addEventListener("DOMContentLoaded", () => {
   if (resumed) renderCard(); else start();
 });
 </script>
-<script src="lessons.js?v=8"></script>
-<script src="study.js?v=8"></script>
+<script src="lessons.js?v=9"></script>
+<script src="study.js?v=9"></script>
 
 </body></html>
