@@ -197,7 +197,7 @@ kbd { font: inherit; font-weight: 600; color: var(--ink); background: var(--surf
   .btn:active, .play:active, .summary:active { transform: none; }
 }
 </style>
-<link rel="stylesheet" href="study.css?v=9">
+<link rel="stylesheet" href="study.css?v=10">
 
 <div class="wrap">
   <header class="top">
@@ -696,6 +696,14 @@ window.addEventListener("DOMContentLoaded", () => {
       c.clip = it.a;
       WORDS.push(c);
     }))));
+    // Words from the lesson notes and Reference that the original card set missed
+    (L.extraWords || []).forEach(([zh, py, en, n, clip]) => {
+      if (haveWord.has(zh) || !UNITS[n]) return;
+      haveWord.add(zh);
+      const c = [zh, py, en, n];
+      c.clip = clip;
+      WORDS.push(c);
+    });
     state.units = new Set(allUnits());
     const have = new Set(SENTENCES.map(c => c[0]));
     L.units.forEach(u => u.n >= 1 && u.sections.forEach(sec => sec.blocks.filter(b => b.t === "test").forEach(b => b.rows.forEach(r => {
@@ -713,7 +721,7 @@ window.addEventListener("DOMContentLoaded", () => {
   if (resumed) renderCard(); else start();
 });
 </script>
-<script src="lessons.js?v=9"></script>
-<script src="study.js?v=9"></script>
+<script src="lessons.js?v=10"></script>
+<script src="study.js?v=10"></script>
 
 </body></html>
